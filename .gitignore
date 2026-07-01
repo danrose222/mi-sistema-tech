@@ -2,6 +2,7 @@
 .env
 .env.local
 .env.*.local
+.env.*.js
 
 # Node
 node_modules/
@@ -20,8 +21,10 @@ yarn.lock
 
 # OS
 Thumbs.db
+.DS_Store
 
 # Build outputs
 dist/
 build/
 tmp/
+out-tsc/
