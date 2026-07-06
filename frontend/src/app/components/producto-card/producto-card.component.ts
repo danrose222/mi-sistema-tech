@@ -1,8 +1,6 @@
 import { Component, Input, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { MatCardModule } from '@angular/material/card';
-import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
@@ -11,91 +9,90 @@ import { CarritoService } from '../../services/carrito.service';
 @Component({
   selector: 'app-producto-card',
   standalone: true,
-  imports: [CommonModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule],
+  imports: [CommonModule, RouterModule, MatIconModule],
   template: `
-    <mat-card class="prod-card mat-elevation-z2">
-      <div class="img-wrapper" [routerLink]="['/producto', producto.slug]">
-        <img mat-card-image [src]="producto.imagenes?.[0] || 'assets/placeholder.jpg'" [alt]="producto.nombre" loading="lazy">
+    <div class="product card">
+      <a class="product-img" [routerLink]="['/producto', producto.slug]">
+        <img [src]="producto.imagenes?.[0] || 'assets/producto-ejemplo.jpeg'" [alt]="producto.nombre" loading="lazy">
+      </a>
+      <div class="product-body">
+        <a class="product-name" [routerLink]="['/producto', producto.slug]">{{ producto.nombre }}</a>
+        <span class="product-price">{{ producto.precio | currency:'ARS':'symbol':'1.0-0' }}</span>
       </div>
-      <mat-card-content class="prod-content">
-        <p class="cat-name">{{ producto.categoria_nombre }}</p>
-        <h3 class="prod-name" [routerLink]="['/producto', producto.slug]">{{ producto.nombre }}</h3>
-        <p class="prod-price">{{ producto.precio | currency:'ARS' }}</p>
-      </mat-card-content>
-      <mat-card-actions class="prod-actions">
-        <button mat-flat-button color="primary" class="full-width" (click)="agregarAlCarrito()">
-          <mat-icon>add_shopping_cart</mat-icon> Comprar
+      <div class="product-footer">
+        <button class="btn-primary product-btn" (click)="agregarAlCarrito()">
+          <mat-icon>add_shopping_cart</mat-icon>
+          Agregar
         </button>
-      </mat-card-actions>
-    </mat-card>
+      </div>
+    </div>
   `,
   styles: [`
-    .prod-card {
-      height: 100%;
+    .product {
       display: flex;
       flex-direction: column;
-      border-radius: 12px;
-      overflow: hidden;
-      transition: transform 0.2s, box-shadow 0.2s;
+      height: 100%;
     }
-    .prod-card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
-    }
-    .img-wrapper {
-      height: 220px;
-      overflow: hidden;
+    .product-img {
       display: flex;
       align-items: center;
       justify-content: center;
-      background: #f8fafc;
-      cursor: pointer;
-      padding: 16px;
+      height: 220px;
+      background: var(--void);
+      overflow: hidden;
+      border-radius: var(--radius-md) var(--radius-md) 0 0;
     }
-    .img-wrapper img {
+    .product-img img {
       max-height: 100%;
       max-width: 100%;
       object-fit: contain;
-      transition: transform 0.3s;
+      transition: transform 0.3s ease;
+      padding: 16px;
     }
-    .prod-card:hover .img-wrapper img {
+    .product:hover .product-img img {
       transform: scale(1.05);
     }
-    .prod-content {
-      padding: 16px;
-      flex-grow: 1;
+    .product-body {
+      padding: 20px 20px 0;
+      flex: 1;
       display: flex;
       flex-direction: column;
     }
-    .cat-name {
-      color: #64748b;
-      font-size: 0.8rem;
-      text-transform: uppercase;
-      margin-bottom: 4px;
-      letter-spacing: 0.5px;
-    }
-    .prod-name {
-      margin: 0 0 12px 0;
-      font-size: 1.1rem;
+    .product-name {
+      font-family: var(--font-display);
       font-weight: 600;
-      color: #1e293b;
-      cursor: pointer;
+      font-size: 1.05rem;
+      color: var(--white);
+      text-decoration: none;
+      line-height: 1.4;
+      margin-bottom: 12px;
       display: -webkit-box;
       -webkit-line-clamp: 2;
       -webkit-box-orient: vertical;
       overflow: hidden;
+      transition: color 0.15s;
     }
-    .prod-price {
-      margin-top: auto;
-      font-size: 1.3rem;
+    .product-name:hover { color: var(--pulse); }
+    .product-price {
+      font-family: var(--font-display);
+      font-size: 1.5rem;
       font-weight: 700;
-      color: #0284c7;
-      margin-bottom: 0;
+      color: var(--signal);
+      margin-top: auto;
     }
-    .prod-actions {
-      padding: 0 16px 16px;
+    .product-footer {
+      padding: 16px 20px 20px;
     }
-    .full-width { width: 100%; }
+    .product-btn {
+      width: 100%;
+      padding: 10px 16px;
+      font-size: 0.9rem;
+    }
+    .product-btn mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
   `]
 })
 export class ProductoCardComponent {

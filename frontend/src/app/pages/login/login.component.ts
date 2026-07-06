@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
@@ -6,23 +6,21 @@ import { AuthService } from '../../services/auth.service';
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [FormsModule], // Requerido para [(ngModel)]
+  imports: [FormsModule],
   template: `
-    <div class="login-container">
-      <div class="login-box">
-        <div class="brand">
-          <h2>Mi Sistema Tech</h2>
-          <p class="subtitle">Panel Administrativo</p>
+    <div class="login-page">
+      <div class="login-card card">
+        <div class="login-header">
+          <h1 class="logo-mark" style="font-size: 1.8rem;">CEL<span class="dot">·</span>SHOP</h1>
+          <p class="login-sub">Panel de administración</p>
         </div>
 
-        @if (errorMsg()) {
-          <div class="error-banner">
-            {{ errorMsg() }}
-          </div>
+        @if (errorMsg) {
+          <div class="error-msg">{{ errorMsg }}</div>
         }
 
         <form (ngSubmit)="onSubmit()" #loginForm="ngForm">
-          <div class="form-group">
+          <div class="field">
             <label for="username">Usuario</label>
             <input 
               type="text" 
@@ -30,13 +28,13 @@ import { AuthService } from '../../services/auth.service';
               name="username" 
               [(ngModel)]="username" 
               required
-              class="form-control"
-              placeholder="Ej. admin"
+              class="form-input"
+              placeholder="admin"
               autofocus
             >
           </div>
 
-          <div class="form-group">
+          <div class="field">
             <label for="password">Contraseña</label>
             <input 
               type="password" 
@@ -44,122 +42,72 @@ import { AuthService } from '../../services/auth.service';
               name="password" 
               [(ngModel)]="password" 
               required
-              class="form-control"
+              class="form-input"
               placeholder="••••••••"
             >
           </div>
 
           <button 
             type="submit" 
-            class="btn-login"
-            [disabled]="loginForm.invalid || isLoading()"
+            class="btn-primary submit-btn"
+            [disabled]="loginForm.invalid || isLoading"
           >
-            {{ isLoading() ? 'Autenticando...' : 'Iniciar Sesión' }}
+            {{ isLoading ? 'Ingresando...' : 'Iniciar sesión' }}
           </button>
         </form>
       </div>
     </div>
   `,
   styles: [`
-    .login-container {
+    .login-page {
       display: flex;
       justify-content: center;
       align-items: center;
       min-height: 100vh;
-      background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
-      font-family: 'Inter', system-ui, sans-serif;
+      background: 
+        radial-gradient(ellipse at 50% 100%, rgba(59, 130, 246, 0.06) 0%, transparent 60%),
+        var(--void);
+      padding: 24px;
     }
-
-    .login-box {
-      background: white;
-      padding: 48px;
-      border-radius: 16px;
-      box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    .login-card {
+      padding: 48px 40px;
       width: 100%;
-      max-width: 420px;
+      max-width: 400px;
     }
-
-    .brand {
+    .login-header {
       text-align: center;
-      margin-bottom: 32px;
+      margin-bottom: 36px;
     }
-
-    h2 {
-      margin: 0 0 8px 0;
-      color: #0f172a;
-      font-size: 1.75rem;
-      font-weight: 800;
+    .login-sub {
+      color: var(--ash);
+      margin: 12px 0 0 0;
+      font-size: 0.9rem;
+      letter-spacing: 0.02em;
     }
-
-    .subtitle {
-      color: #64748b;
-      margin: 0;
-      font-weight: 500;
-    }
-
-    .error-banner {
-      background-color: #fef2f2;
-      color: #b91c1c;
+    .error-msg {
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--danger);
+      border: 1px solid rgba(239, 68, 68, 0.2);
       padding: 12px 16px;
-      border-radius: 8px;
+      border-radius: var(--radius-sm);
       margin-bottom: 24px;
       font-size: 0.875rem;
-      font-weight: 500;
       text-align: center;
-      border: 1px solid #fecaca;
     }
-
-    .form-group {
-      margin-bottom: 24px;
+    .field {
+      margin-bottom: 20px;
     }
-
     label {
       display: block;
       margin-bottom: 8px;
-      color: #334155;
-      font-size: 0.875rem;
-      font-weight: 600;
+      color: var(--ash);
+      font-size: 0.85rem;
+      font-weight: 500;
     }
-
-    .form-control {
+    .submit-btn {
       width: 100%;
-      padding: 12px 16px;
-      border: 1px solid #cbd5e1;
-      border-radius: 8px;
-      outline: none;
-      transition: all 0.2s ease;
-      box-sizing: border-box;
-      font-size: 1rem;
-      color: #1e293b;
-    }
-
-    .form-control:focus {
-      border-color: #0ea5e9;
-      box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.15);
-    }
-
-    .btn-login {
-      width: 100%;
-      padding: 14px;
-      background-color: #0ea5e9;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-weight: 600;
-      font-size: 1rem;
-      cursor: pointer;
-      transition: all 0.2s ease;
       margin-top: 8px;
-    }
-
-    .btn-login:hover:not([disabled]) {
-      background-color: #0284c7;
-      transform: translateY(-1px);
-    }
-
-    .btn-login[disabled] {
-      opacity: 0.6;
-      cursor: not-allowed;
+      padding: 14px;
     }
   `]
 })
@@ -167,33 +115,31 @@ export class LoginComponent {
   authService = inject(AuthService);
   router = inject(Router);
 
-  // Uso de Signals para estado local (Angular 21 style)
-  username = signal('');
-  password = signal('');
-  errorMsg = signal('');
-  isLoading = signal(false);
+  username = '';
+  password = '';
+  errorMsg = '';
+  isLoading = false;
 
   constructor() {
-    // Protección directa si el usuario entra a /login pero ya tiene token
     if (this.authService.isLoggedIn()) {
       this.router.navigate(['/admin/dashboard']);
     }
   }
 
   onSubmit() {
-    if (!this.username() || !this.password()) return;
+    if (!this.username || !this.password) return;
     
-    this.isLoading.set(true);
-    this.errorMsg.set('');
+    this.isLoading = true;
+    this.errorMsg = '';
 
-    this.authService.login(this.username(), this.password()).subscribe({
+    this.authService.login(this.username, this.password).subscribe({
       next: () => {
-        this.isLoading.set(false);
-        this.router.navigate(['/admin/dashboard']); // Redirección tras logueo exitoso
+        this.isLoading = false;
+        this.router.navigate(['/admin/dashboard']);
       },
       error: (err) => {
-        this.isLoading.set(false);
-        this.errorMsg.set('Credenciales inválidas o error de conexión.');
+        this.isLoading = false;
+        this.errorMsg = 'Credenciales inválidas o error de conexión.';
         console.error('Login error:', err);
       }
     });

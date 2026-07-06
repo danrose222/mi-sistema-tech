@@ -1,5 +1,6 @@
-import { Injectable, signal, inject } from '@angular/core';
+import { Injectable, signal, inject, PLATFORM_ID } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { isPlatformBrowser } from '@angular/common';
 import { tap } from 'rxjs/operators';
 import { Observable } from 'rxjs';
 
@@ -20,6 +21,7 @@ export interface AuthResponse {
 })
 export class AuthService {
   private http = inject(HttpClient);
+  private platformId = inject(PLATFORM_ID);
   
   // Signals para el estado global y reactivo de autenticación
   public currentUser = signal<User | null>(null);
@@ -33,11 +35,13 @@ export class AuthService {
    * Carga la sesión desde localStorage al iniciar el servicio
    */
   private loadStateFromStorage(): void {
-    const storedToken = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('usuario');
-    if (storedToken && storedUser) {
-      this.token.set(storedToken);
-      this.currentUser.set(JSON.parse(storedUser));
+    if (isPlatformBrowser(this.platformId)) {
+      const storedToken = localStorage.getItem('token');
+      const storedUser = localStorage.getItem('usuario');
+      if (storedToken && storedUser) {
+        this.token.set(storedToken);
+        this.currentUser.set(JSON.parse(storedUser));
+      }
     }
   }
 
@@ -45,15 +49,17 @@ export class AuthService {
    * Inicia sesión y guarda el token y usuario (en Signal y LocalStorage)
    */
   login(usernameOrEmail: string, password: string): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>('http://localhost:3000/api/auth/login', { 
+    return this.http.post<AuthResponse>('/api/auth/login', { 
       username: usernameOrEmail, 
       password 
     }).pipe(
       tap(response => {
         this.token.set(response.token);
         this.currentUser.set(response.usuario);
-        localStorage.setItem('token', response.token);
-        localStorage.setItem('usuario', JSON.stringify(response.usuario));
+        if (isPlatformBrowser(this.platformId)) {
+          localStorage.setItem('token', response.token);
+          localStorage.setItem('usuario', JSON.stringify(response.usuario));
+        }
       })
     );
   }
@@ -61,8 +67,10 @@ export class AuthService {
   logout(): void {
     this.token.set(null);
     this.currentUser.set(null);
-    localStorage.removeItem('token');
-    localStorage.removeItem('usuario');
+    if (isPlatformBrowser(this.platformId)) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('usuario');
+    }
   }
 
   isLoggedIn(): boolean {

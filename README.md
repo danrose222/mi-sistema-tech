@@ -9,10 +9,11 @@ Breve descripción
 - **Frontend Público:** Angular (v21) SSR (Server-Side Rendering) — catálogo para SEO.
 - **Servicios externos:** MercadoPago (`MP_ACCESS_TOKEN`) y WhatsApp Business API (`WHATSAPP_API_URL`, `WHATSAPP_TOKEN`).
 
-**Características Recientes (Hardening & Testing)**
+**Características Recientes (Hardening, Testing & UI)**
+- **UI/UX Dark Tech:** Nuevo sistema de diseño con paleta de colores personalizada (Signal Blue, Slate, Void), tipografía geométrica (Space Grotesk) y diseño minimalista enfocado en la usabilidad tanto para e-commerce como admin.
 - Pruebas de integración automatizadas con Jest y Supertest para módulos críticos (como Créditos).
 - Seguridad robusta (Helmet, CORS restrictivo, Rate Limiting, bcrypt factor 12, JWT 15m).
-- Rendimiento optimizado (Compresión GZIP, Lazy Loading en Angular, Índices en DB).
+- Rendimiento optimizado (Compresión GZIP, Lazy Loading en Angular, Índices en DB, SSR para catálogo).
 
 **Estructura del repositorio**
 - **backend:** API, modelos, rutas, servicios y migraciones. Revisa [backend/package.json](backend/package.json).

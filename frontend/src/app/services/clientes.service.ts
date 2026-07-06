@@ -23,7 +23,7 @@ export interface ClientesResponse {
 })
 export class ClientesService {
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:3000/api/clientes';
+  private apiUrl = '/api/clientes';
 
   listar(page: number = 1, limit: number = 20, search: string = ''): Observable<ClientesResponse> {
     let params = new HttpParams()

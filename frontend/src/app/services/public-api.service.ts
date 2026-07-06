@@ -19,7 +19,7 @@ export interface ProductoPublico {
 })
 export class PublicApiService {
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:3000/api/publico';
+  private apiUrl = '/api/publico';
 
   getProductos(page: number = 1, limit: number = 20, categoria?: string, search?: string): Observable<any> {
     let params = new HttpParams()

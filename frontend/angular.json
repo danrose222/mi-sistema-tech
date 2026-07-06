@@ -19,6 +19,7 @@
           "options": {
             "browser": "src/main.ts",
             "tsConfig": "tsconfig.app.json",
+            "polyfills": ["zone.js"],
             "assets": [
               {
                 "glob": "**/*",
@@ -33,7 +34,8 @@
             },
             "ssr": {
               "entry": "src/server.ts"
-            }
+            },
+            "prerender": false
           },
           "configurations": {
             "production": {

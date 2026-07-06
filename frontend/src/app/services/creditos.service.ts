@@ -41,7 +41,7 @@ export interface CreditosResponse {
 })
 export class CreditosService {
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:3000/api/creditos';
+  private apiUrl = '/api/creditos';
 
   listar(page: number = 1, limit: number = 20, estado?: string, clienteId?: number): Observable<CreditosResponse> {
     let params = new HttpParams()
@@ -71,6 +71,6 @@ export class CreditosService {
   }
 
   obtenerVencidas(): Observable<any> {
-    return this.http.get(`http://localhost:3000/api/cuotas/vencidas`);
+    return this.http.get(`/api/cuotas/vencidas`);
   }
 }

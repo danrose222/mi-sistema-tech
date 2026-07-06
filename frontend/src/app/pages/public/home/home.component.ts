@@ -14,196 +14,255 @@ import { ProductoCardComponent } from '../../../components/producto-card/product
   standalone: true,
   imports: [CommonModule, RouterModule, MatButtonModule, MatIconModule, MatCardModule, ProductoCardComponent],
   template: `
-    <!-- HERO SECTION -->
+    <!-- HERO -->
     <section class="hero">
-      <div class="hero-content">
-        <span class="hero-badge">Nuevos Ingresos</span>
-        <h1>La Mejor Tecnología <br>al Mejor Precio</h1>
-        <p>Descubrí el smartphone perfecto para vos con envío a todo el país y cuotas sin interés.</p>
-        <div class="hero-actions">
-          <button mat-flat-button color="primary" class="btn-large" routerLink="/productos">Ver Catálogo</button>
-          <button mat-stroked-button class="btn-large outline-white" routerLink="/productos" [queryParams]="{categoria: 'celulares'}">Ofertas Celulares</button>
+      <div class="hero-inner">
+        <h1>Encontrá tu próximo<br>celular.</h1>
+        <p class="hero-sub">Financiación en cuotas sin interés · Envío gratis a todo el país · Garantía oficial de 12 meses.</p>
+        <a routerLink="/productos" class="btn-primary btn-lg">Explorar catálogo</a>
+      </div>
+    </section>
+
+    <!-- TRUST STRIP -->
+    <section class="trust-strip">
+      <div class="trust-inner">
+        <div class="trust-item">
+          <mat-icon>local_shipping</mat-icon>
+          <div>
+            <strong>Envío gratis</strong>
+            <span>En compras +$100.000</span>
+          </div>
+        </div>
+        <div class="trust-item">
+          <mat-icon>credit_score</mat-icon>
+          <div>
+            <strong>Cuotas sin interés</strong>
+            <span>Todas las tarjetas</span>
+          </div>
+        </div>
+        <div class="trust-item">
+          <mat-icon>verified</mat-icon>
+          <div>
+            <strong>Garantía oficial</strong>
+            <span>12 meses</span>
+          </div>
         </div>
       </div>
     </section>
 
-    <!-- CARACTERÍSTICAS -->
-    <section class="features container">
-      <div class="feature">
-        <div class="feat-icon"><mat-icon>local_shipping</mat-icon></div>
-        <h3>Envío Gratis</h3>
-        <p>En compras superiores a $100.000</p>
-      </div>
-      <div class="feature">
-        <div class="feat-icon"><mat-icon>credit_score</mat-icon></div>
-        <h3>Cuotas Sin Interés</h3>
-        <p>Con todas las tarjetas de crédito</p>
-      </div>
-      <div class="feature">
-        <div class="feat-icon"><mat-icon>verified</mat-icon></div>
-        <h3>Garantía Oficial</h3>
-        <p>12 meses en todos nuestros productos</p>
-      </div>
-    </section>
-
-    <!-- DESTACADOS -->
-    <section class="destacados container">
-      <div class="section-header">
-        <h2>Productos Destacados</h2>
-        <a routerLink="/productos" class="view-all">Ver todos <mat-icon inline>arrow_forward</mat-icon></a>
-      </div>
-      
-      <div class="productos-grid">
-        @for (prod of destacados(); track prod.id) {
-          <app-producto-card [producto]="prod"></app-producto-card>
-        } @empty {
-          <!-- Skeleton loaders para el parpadeo de carga -->
-          <div class="skeleton-card" *ngFor="let i of [1,2,3,4]"></div>
-        }
+    <!-- FEATURED PRODUCTS -->
+    <section class="section">
+      <div class="section-inner">
+        <div class="section-header">
+          <h2>Productos destacados</h2>
+          <a routerLink="/productos" class="see-all">Ver todos <mat-icon inline>arrow_forward</mat-icon></a>
+        </div>
+        
+        <div class="product-grid">
+          @for (prod of destacados(); track prod.id) {
+            <app-producto-card [producto]="prod"></app-producto-card>
+          } @empty {
+            <div class="skeleton" *ngFor="let i of [1,2,3,4]"></div>
+          }
+        </div>
       </div>
     </section>
 
-    <!-- CATEGORÍAS POPULARES -->
-    <section class="categorias bg-light">
-      <div class="container">
-        <div class="section-header center">
-          <h2>Categorías Populares</h2>
+    <!-- CATEGORIES -->
+    <section class="section section--alt">
+      <div class="section-inner">
+        <div class="section-header section-header--center">
+          <h2>Categorías</h2>
         </div>
         <div class="cat-grid">
-          <mat-card class="cat-card" routerLink="/productos" [queryParams]="{categoria: 'celulares'}">
+          <a class="cat-item card" routerLink="/productos" [queryParams]="{categoria: 'celulares'}">
             <mat-icon>smartphone</mat-icon>
-            <h3>Celulares</h3>
-          </mat-card>
-          <mat-card class="cat-card" routerLink="/productos" [queryParams]="{categoria: 'laptops'}">
+            <span>Celulares</span>
+          </a>
+          <a class="cat-item card" routerLink="/productos" [queryParams]="{categoria: 'laptops'}">
             <mat-icon>laptop_mac</mat-icon>
-            <h3>Laptops</h3>
-          </mat-card>
-          <mat-card class="cat-card" routerLink="/productos" [queryParams]="{categoria: 'accesorios'}">
+            <span>Laptops</span>
+          </a>
+          <a class="cat-item card" routerLink="/productos" [queryParams]="{categoria: 'accesorios'}">
             <mat-icon>headphones</mat-icon>
-            <h3>Accesorios</h3>
-          </mat-card>
+            <span>Accesorios</span>
+          </a>
         </div>
       </div>
     </section>
   `,
   styles: [`
-    .container {
+    /* ── Hero ────────────────────────────── */
+    .hero {
+      padding: 100px 24px 80px;
+      background: 
+        radial-gradient(ellipse at 20% 80%, rgba(59, 130, 246, 0.08) 0%, transparent 60%),
+        var(--void);
+    }
+    .hero-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .hero h1 {
+      font-family: var(--font-display);
+      font-size: 4rem;
+      font-weight: 700;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      color: var(--white);
+      margin: 0 0 20px 0;
+    }
+    .hero-sub {
+      color: var(--ash);
+      font-size: 1.1rem;
+      line-height: 1.6;
+      margin: 0 0 36px 0;
+      max-width: 520px;
+    }
+    .btn-lg { padding: 14px 36px; font-size: 1rem; }
+
+    /* ── Trust strip ────────────────────── */
+    .trust-strip {
+      border-bottom: 1px solid var(--border-dim);
+    }
+    .trust-inner {
+      display: flex;
       max-width: 1200px;
       margin: 0 auto;
       padding: 0 24px;
     }
-    
-    /* Hero */
-    .hero {
-      background: linear-gradient(135deg, #0f172a 0%, #0284c7 100%);
-      color: white;
-      padding: 80px 24px;
-      text-align: center;
-    }
-    .hero-content { max-width: 800px; margin: 0 auto; }
-    .hero-badge {
-      display: inline-block;
-      background: rgba(255,255,255,0.2);
-      padding: 6px 16px;
-      border-radius: 20px;
-      font-size: 0.9rem;
-      margin-bottom: 24px;
-      font-weight: 600;
-    }
-    .hero h1 { font-size: 3.5rem; font-weight: 800; line-height: 1.2; margin-bottom: 24px; }
-    .hero p { font-size: 1.2rem; color: #e0f2fe; margin-bottom: 32px; }
-    .hero-actions { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
-    .btn-large { padding: 8px 32px; font-size: 1.1rem; border-radius: 30px; }
-    .outline-white { color: white; border-color: white; }
-
-    /* Features */
-    .features {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 32px;
-      padding: 64px 24px;
-    }
-    .feature {
+    .trust-item {
+      flex: 1;
       display: flex;
-      flex-direction: column;
       align-items: center;
-      text-align: center;
-      padding: 32px;
-      background: white;
-      border-radius: 16px;
-      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+      gap: 14px;
+      padding: 24px 0;
     }
-    .feat-icon {
-      background: #e0f2fe;
-      color: #0284c7;
-      width: 64px; height: 64px;
-      border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      margin-bottom: 16px;
+    .trust-item:not(:last-child) {
+      border-right: 1px solid var(--border-dim);
+      padding-right: 32px;
+      margin-right: 32px;
     }
-    .feat-icon mat-icon { font-size: 32px; width: 32px; height: 32px; }
-    .feature h3 { margin: 0 0 8px 0; font-size: 1.2rem; color: #1e293b; }
-    .feature p { margin: 0; color: #64748b; }
+    .trust-item mat-icon {
+      color: var(--signal);
+      font-size: 28px;
+      width: 28px;
+      height: 28px;
+      flex-shrink: 0;
+    }
+    .trust-item strong {
+      display: block;
+      color: var(--white);
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+    .trust-item span {
+      color: var(--ash);
+      font-size: 0.82rem;
+    }
 
-    /* Destacados */
-    .destacados { padding-bottom: 64px; }
+    /* ── Sections ────────────────────────── */
+    .section {
+      padding: 72px 0;
+    }
+    .section--alt {
+      background-color: var(--slate);
+      border-top: 1px solid var(--border-dim);
+    }
+    .section-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
     .section-header {
       display: flex;
       justify-content: space-between;
-      align-items: flex-end;
-      margin-bottom: 32px;
+      align-items: baseline;
+      margin-bottom: 36px;
     }
-    .section-header.center { justify-content: center; margin-bottom: 48px; }
-    .section-header h2 { margin: 0; font-size: 2rem; color: #0f172a; font-weight: 700; }
-    .view-all { color: #0284c7; text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 4px; }
-    .view-all:hover { text-decoration: underline; }
+    .section-header--center { justify-content: center; }
+    .section-header h2 {
+      font-family: var(--font-display);
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: var(--white);
+      margin: 0;
+      letter-spacing: -0.02em;
+    }
+    .see-all {
+      color: var(--pulse);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: color 0.15s;
+    }
+    .see-all:hover { color: var(--signal); }
 
-    .productos-grid {
+    /* Product grid */
+    .product-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
       gap: 24px;
     }
 
-    .skeleton-card {
-      height: 400px;
-      background: #f1f5f9;
-      border-radius: 12px;
-      animation: pulse 1.5s infinite;
+    .skeleton {
+      height: 380px;
+      background: var(--slate);
+      border: 1px solid var(--border-dim);
+      border-radius: var(--radius-md);
+      animation: shimmer 1.5s infinite;
     }
-    @keyframes pulse {
-      0% { opacity: 0.6; }
-      50% { opacity: 1; }
-      100% { opacity: 0.6; }
+    @keyframes shimmer {
+      0%, 100% { opacity: 0.4; }
+      50% { opacity: 0.7; }
     }
 
-    /* Categorías */
-    .bg-light { background-color: #f1f5f9; padding: 64px 0; }
+    /* Category grid */
     .cat-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 24px;
+      gap: 20px;
     }
-    .cat-card {
+    .cat-item {
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 48px 24px;
+      padding: 44px 24px;
       cursor: pointer;
-      transition: all 0.2s;
-      border: 1px solid #e2e8f0;
-      box-shadow: none !important;
+      text-decoration: none;
     }
-    .cat-card:hover {
-      border-color: #0284c7;
-      transform: translateY(-4px);
-      box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1) !important;
+    .cat-item mat-icon {
+      font-size: 40px;
+      width: 40px;
+      height: 40px;
+      color: var(--signal);
+      margin-bottom: 16px;
     }
-    .cat-card mat-icon { font-size: 48px; width: 48px; height: 48px; margin-bottom: 16px; color: #0284c7; }
-    .cat-card h3 { margin: 0; font-size: 1.2rem; color: #1e293b; font-weight: 600; }
+    .cat-item span {
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 1.05rem;
+      color: var(--white);
+    }
 
+    /* ── Responsive ──────────────────────── */
     @media (max-width: 768px) {
       .hero h1 { font-size: 2.5rem; }
+      .hero { padding: 64px 24px 48px; }
+      .trust-inner { flex-direction: column; }
+      .trust-item:not(:last-child) {
+        border-right: none;
+        border-bottom: 1px solid var(--border-dim);
+        padding-right: 0;
+        margin-right: 0;
+        padding-bottom: 16px;
+        margin-bottom: 16px;
+      }
     }
   `]
 })

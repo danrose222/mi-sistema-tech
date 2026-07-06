@@ -22,201 +22,208 @@ import { CarritoService } from '../../services/carrito.service';
     MatMenuModule
   ],
   template: `
-    <div class="public-container">
+    <div class="shell">
       
-      <!-- HEADER -->
-      <mat-toolbar color="primary" class="navbar mat-elevation-z4">
-        <div class="nav-content">
-          <div class="logo-section" routerLink="/">
-            <mat-icon class="logo-icon">phone_iphone</mat-icon>
-            <span class="brand-name">CEL SHOP CENTER</span>
+      <!-- NAVBAR -->
+      <header class="navbar">
+        <div class="navbar-inner">
+          <h1 class="logo-mark" routerLink="/">CEL<span class="dot">·</span>SHOP</h1>
+
+          <div class="search-wrapper hidden-mobile">
+            <mat-icon class="search-icon">search</mat-icon>
+            <input 
+              type="text" 
+              placeholder="Buscar celulares, laptops, accesorios..." 
+              (keyup.enter)="buscar($event)"
+            >
           </div>
 
-          <div class="search-bar hidden-mobile">
-            <input type="text" placeholder="Buscar productos..." (keyup.enter)="buscar($event)">
-            <mat-icon>search</mat-icon>
-          </div>
-
-          <div class="actions">
-            <button mat-button routerLink="/productos" class="hidden-mobile">Catálogo</button>
-            <button mat-icon-button routerLink="/carrito" aria-label="Ver carrito">
+          <nav class="nav-actions">
+            <a routerLink="/productos" class="nav-link hidden-mobile">Catálogo</a>
+            <button mat-icon-button routerLink="/carrito" aria-label="Ver carrito" class="cart-btn">
               <mat-icon [matBadge]="carritoService.totalItems()" matBadgeColor="warn" [matBadgeHidden]="carritoService.totalItems() === 0">shopping_cart</mat-icon>
             </button>
-            <!-- Menú hamburguesa para mobile -->
             <button mat-icon-button [matMenuTriggerFor]="menu" class="mobile-only" aria-label="Menú">
               <mat-icon>menu</mat-icon>
             </button>
             <mat-menu #menu="matMenu">
               <button mat-menu-item routerLink="/productos">Catálogo</button>
-              <button mat-menu-item routerLink="/admin/dashboard">Administración</button>
+              <button mat-menu-item routerLink="/login">Administración</button>
             </mat-menu>
-          </div>
+          </nav>
         </div>
-      </mat-toolbar>
+      </header>
 
-      <!-- BUSCADOR MOBILE -->
-      <div class="mobile-search mobile-only">
-        <input type="text" placeholder="Buscar productos..." (keyup.enter)="buscar($event)">
-        <mat-icon>search</mat-icon>
-      </div>
-
-      <!-- CONTENIDO PRINCIPAL -->
-      <main class="main-content">
+      <!-- CONTENT -->
+      <main class="main">
         <router-outlet></router-outlet>
       </main>
 
       <!-- FOOTER -->
       <footer class="footer">
-        <div class="footer-grid">
+        <div class="footer-inner">
           <div class="footer-col">
-            <h3>CEL SHOP CENTER</h3>
+            <h4 class="logo-mark" style="font-size: 1.2rem;">CEL<span class="dot">·</span>SHOP</h4>
             <p>Tu tienda de tecnología de confianza en Argentina.</p>
           </div>
           <div class="footer-col">
-            <h3>Enlaces</h3>
+            <h4>Navegación</h4>
             <ul>
               <li><a routerLink="/">Inicio</a></li>
               <li><a routerLink="/productos">Productos</a></li>
-              <li><a routerLink="/admin/login">Acceso Empleados</a></li>
+              <li><a routerLink="/login">Acceso empleados</a></li>
             </ul>
           </div>
           <div class="footer-col">
-            <h3>Contacto</h3>
-            <p><mat-icon inline>email</mat-icon> ventas&#64;celshop.com.ar</p>
-            <p><mat-icon inline>phone</mat-icon> +54 9 11 1234-5678</p>
+            <h4>Contacto</h4>
+            <p>ventas&#64;celshop.com.ar</p>
+            <p>+54 9 11 1234-5678</p>
           </div>
         </div>
         <div class="footer-bottom">
-          <p>&copy; 2026 Cel Shop Center. Todos los derechos reservados.</p>
+          <p>&copy; 2026 Cel Shop Center</p>
         </div>
       </footer>
     </div>
   `,
   styles: [`
-    .public-container {
+    .shell {
       display: flex;
       flex-direction: column;
       min-height: 100vh;
-      background-color: #f8fafc;
+      background-color: var(--void);
     }
 
+    /* ── Navbar ─────────────────────────── */
     .navbar {
       position: sticky;
       top: 0;
-      z-index: 1000;
-      height: 70px;
-      padding: 0 24px;
+      z-index: 100;
+      height: 64px;
+      background: var(--surface-glass);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border-dim);
     }
-
-    .nav-content {
+    .navbar-inner {
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      width: 100%;
+      gap: 24px;
       max-width: 1200px;
       margin: 0 auto;
+      padding: 0 24px;
+      height: 100%;
     }
 
-    .logo-section {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      cursor: pointer;
-    }
-    .logo-icon { font-size: 28px; width: 28px; height: 28px; }
-    .brand-name { font-size: 1.4rem; font-weight: 700; letter-spacing: 0.5px; }
-
-    /* Buscador */
-    .search-bar {
+    /* Search */
+    .search-wrapper {
+      flex: 1;
+      max-width: 480px;
       position: relative;
-      flex: 0 1 500px;
-      margin: 0 24px;
     }
-    .search-bar input {
+    .search-wrapper input {
       width: 100%;
-      padding: 10px 16px 10px 40px;
-      border-radius: 20px;
-      border: none;
+      padding: 9px 16px 9px 40px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border-dim);
+      border-radius: var(--radius-sm);
+      color: var(--white);
+      font-size: 0.9rem;
+      font-family: var(--font-body);
       outline: none;
-      background: rgba(255,255,255,0.15);
-      color: white;
-      font-size: 1rem;
-      transition: background 0.3s;
+      transition: border-color 0.2s;
+      box-sizing: border-box;
     }
-    .search-bar input::placeholder { color: rgba(255,255,255,0.7); }
-    .search-bar input:focus { background: rgba(255,255,255,0.25); }
-    .search-bar mat-icon {
+    .search-wrapper input::placeholder { color: var(--ash); }
+    .search-wrapper input:focus { border-color: var(--signal); }
+    .search-icon {
       position: absolute;
       left: 12px;
       top: 50%;
       transform: translateY(-50%);
-      color: rgba(255,255,255,0.8);
+      color: var(--ash);
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
     }
 
-    .mobile-search {
-      position: relative;
-      padding: 12px 16px;
-      background: #0284c7; /* asumiendo theme primary color de material preconfigurado */
+    /* Nav actions */
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-left: auto;
     }
-    .mobile-search input {
-      width: 100%;
-      padding: 10px 16px 10px 40px;
-      border-radius: 20px;
-      border: none;
-      outline: none;
-      background: rgba(255,255,255,0.9);
-      font-size: 1rem;
+    .nav-link {
+      color: var(--ash);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 500;
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      transition: color 0.15s;
     }
-    .mobile-search mat-icon {
-      position: absolute;
-      left: 28px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: #64748b;
-    }
+    .nav-link:hover { color: var(--white); }
+    .cart-btn { color: var(--white) !important; }
 
-    .actions { display: flex; align-items: center; gap: 8px; }
+    /* Main */
+    .main { flex: 1; }
 
-    .main-content {
-      flex: 1;
-    }
-
-    /* Footer */
+    /* ── Footer ─────────────────────────── */
     .footer {
-      background-color: #1e293b;
-      color: #cbd5e1;
-      padding-top: 48px;
+      background-color: var(--slate);
+      color: var(--ash);
       margin-top: auto;
+      border-top: 1px solid var(--border-dim);
     }
-    .footer-grid {
+    .footer-inner {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 32px;
+      grid-template-columns: 1.5fr 1fr 1fr;
+      gap: 48px;
       max-width: 1200px;
       margin: 0 auto;
-      padding: 0 24px 32px;
+      padding: 56px 24px 40px;
     }
-    .footer-col h3 { color: white; margin-bottom: 16px; font-weight: 600; }
-    .footer-col ul { list-style: none; padding: 0; margin: 0; }
-    .footer-col ul li { margin-bottom: 8px; }
-    .footer-col ul li a { color: #cbd5e1; text-decoration: none; transition: color 0.2s; }
-    .footer-col ul li a:hover { color: white; }
-    .footer-col p { margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
-    
-    .footer-bottom {
-      background-color: #0f172a;
-      text-align: center;
-      padding: 16px;
+    .footer-col h4 {
+      color: var(--white);
+      font-family: var(--font-display);
+      font-weight: 600;
+      margin: 0 0 16px 0;
+      font-size: 0.95rem;
+    }
+    .footer-col p {
+      margin: 0 0 8px 0;
       font-size: 0.9rem;
+      line-height: 1.6;
+    }
+    .footer-col ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .footer-col ul li { margin-bottom: 8px; }
+    .footer-col ul li a {
+      color: var(--ash);
+      text-decoration: none;
+      font-size: 0.9rem;
+      transition: color 0.15s;
+    }
+    .footer-col ul li a:hover { color: var(--pulse); }
+
+    .footer-bottom {
+      border-top: 1px solid var(--border-dim);
+      text-align: center;
+      padding: 20px;
+      font-size: 0.85rem;
     }
     .footer-bottom p { margin: 0; }
 
-    .mobile-only { display: none; }
-
+    /* ── Responsive ─────────────────────── */
+    .mobile-only { display: none !important; }
     @media (max-width: 768px) {
       .hidden-mobile { display: none !important; }
-      .mobile-only { display: block; }
-      .nav-content { padding: 0; }
+      .mobile-only { display: inline-flex !important; }
+      .footer-inner { grid-template-columns: 1fr; gap: 32px; }
     }
   `]
 })

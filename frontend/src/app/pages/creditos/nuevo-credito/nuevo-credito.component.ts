@@ -294,7 +294,7 @@ export class NuevoCreditoComponent implements OnInit {
 
   clienteSeleccionado = computed(() => {
     const val = this.clienteFormGroup.get('clienteSearch')?.value;
-    return typeof val === 'object' ? (val as Cliente) : null;
+    return typeof val === 'object' && val !== null ? (val as Cliente) : null;
   });
 
   isClienteSeleccionado = computed(() => {
@@ -302,8 +302,8 @@ export class NuevoCreditoComponent implements OnInit {
   });
 
   montoCuotaCalculado = computed(() => {
-    const total = this.creditoFormGroup.get('montoTotal')?.value;
-    const cuotas = this.creditoFormGroup.get('cantidadCuotas')?.value;
+    const total = Number(this.creditoFormGroup.get('montoTotal')?.value);
+    const cuotas = Number(this.creditoFormGroup.get('cantidadCuotas')?.value);
     if (total && cuotas && cuotas > 0) {
       return total / cuotas;
     }

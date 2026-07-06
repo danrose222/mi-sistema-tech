@@ -7,151 +7,133 @@ import { AuthService } from '../../services/auth.service';
   standalone: true,
   imports: [RouterOutlet, RouterLink, RouterLinkActive],
   template: `
-    <div class="app-layout">
-      <!-- Sidebar de Navegación -->
+    <div class="admin-shell">
       <aside class="sidebar">
-        <div class="sidebar-header">
-          <h2>Mi Sistema Tech</h2>
+        <div class="sidebar-brand">
+          <h1 class="logo-mark" style="font-size: 1.3rem;">CEL<span class="dot">·</span>SHOP</h1>
         </div>
         <nav class="sidebar-nav">
-          <a routerLink="/admin/dashboard" routerLinkActive="active" class="nav-item">Dashboard</a>
-          <a routerLink="/admin/clientes" routerLinkActive="active" class="nav-item">Clientes</a>
-          <a routerLink="/admin/productos" routerLinkActive="active" class="nav-item">Productos</a>
-          <a routerLink="/admin/pedidos" routerLinkActive="active" class="nav-item">Pedidos</a>
-          <a routerLink="/admin/creditos" routerLinkActive="active" class="nav-item">Créditos</a>
+          <a routerLink="/admin/dashboard" routerLinkActive="active" class="nav-item">
+            <span class="nav-label">Dashboard</span>
+          </a>
+          <a routerLink="/admin/clientes" routerLinkActive="active" class="nav-item">
+            <span class="nav-label">Clientes</span>
+          </a>
+          <a routerLink="/admin/productos" routerLinkActive="active" class="nav-item">
+            <span class="nav-label">Productos</span>
+          </a>
+          <a routerLink="/admin/pedidos" routerLinkActive="active" class="nav-item">
+            <span class="nav-label">Pedidos</span>
+          </a>
+          <a routerLink="/admin/creditos" routerLinkActive="active" class="nav-item">
+            <span class="nav-label">Créditos</span>
+          </a>
         </nav>
       </aside>
 
-      <!-- Contenedor Principal -->
-      <main class="main-content">
-        <!-- Header Superior -->
-        <header class="headerbar">
-          <div class="user-info">
-            <span class="greeting">Hola, {{ authService.currentUser()?.nombre }}</span>
-            <span class="role-badge">{{ authService.currentUser()?.rol }}</span>
+      <main class="admin-main">
+        <header class="topbar">
+          <div class="topbar-left">
+            <span class="greeting">{{ authService.currentUser()?.nombre }}</span>
+            <span class="role">{{ authService.currentUser()?.rol }}</span>
           </div>
-          <button (click)="logout()" class="btn-logout">Cerrar Sesión</button>
+          <button (click)="logout()" class="btn-danger">Cerrar sesión</button>
         </header>
 
-        <!-- Contenido Dinámico según la ruta -->
-        <div class="content-area">
+        <div class="admin-content">
           <router-outlet></router-outlet>
         </div>
       </main>
     </div>
   `,
   styles: [`
-    .app-layout {
+    .admin-shell {
       display: flex;
       height: 100vh;
-      background-color: #f8fafc;
-      font-family: 'Inter', system-ui, sans-serif;
+      background-color: var(--void);
+      color: var(--white);
+      font-family: var(--font-body);
     }
-    
+
+    /* ── Sidebar ─────────────────────── */
     .sidebar {
-      width: 250px;
-      background-color: #0f172a;
-      color: white;
+      width: 240px;
+      background-color: var(--slate);
+      border-right: 1px solid var(--border-dim);
       display: flex;
       flex-direction: column;
+      flex-shrink: 0;
     }
-
-    .sidebar-header {
-      padding: 24px 20px;
-      border-bottom: 1px solid #1e293b;
+    .sidebar-brand {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border-dim);
     }
-
-    .sidebar-header h2 {
-      margin: 0;
-      font-size: 1.25rem;
-      font-weight: 700;
-      color: #38bdf8;
-    }
-
     .sidebar-nav {
-      padding: 20px 0;
+      padding: 16px 12px;
       display: flex;
       flex-direction: column;
-      gap: 5px;
+      gap: 4px;
     }
-
     .nav-item {
-      padding: 12px 24px;
-      color: #94a3b8;
+      display: block;
+      padding: 11px 16px;
+      color: var(--ash);
       text-decoration: none;
-      transition: all 0.2s ease;
+      border-radius: var(--radius-sm);
+      font-size: 0.9rem;
       font-weight: 500;
+      transition: all 0.15s ease;
     }
-
     .nav-item:hover {
-      background-color: #1e293b;
-      color: white;
+      color: var(--white);
+      background-color: rgba(255,255,255,0.04);
     }
-
     .nav-item.active {
-      background-color: #0ea5e9;
-      color: white;
-      border-right: 4px solid #7dd3fc;
+      color: var(--signal);
+      background-color: rgba(59, 130, 246, 0.1);
+      font-weight: 600;
     }
 
-    .main-content {
+    /* ── Main area ───────────────────── */
+    .admin-main {
       flex: 1;
       display: flex;
       flex-direction: column;
       overflow: hidden;
     }
 
-    .headerbar {
+    .topbar {
       height: 64px;
-      background-color: white;
-      border-bottom: 1px solid #e2e8f0;
-      display: flex;
-      justify-content: flex-end; /* A la derecha por diseño moderno */
-      align-items: center;
       padding: 0 32px;
-      gap: 24px;
-      box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-dim);
+      background: var(--slate);
+      flex-shrink: 0;
     }
-
-    .user-info {
+    .topbar-left {
       display: flex;
       align-items: center;
       gap: 12px;
     }
-
     .greeting {
       font-weight: 600;
-      color: #334155;
+      font-size: 0.95rem;
     }
-
-    .role-badge {
-      background-color: #e0f2fe;
-      color: #0284c7;
+    .role {
+      background-color: rgba(59, 130, 246, 0.1);
+      color: var(--pulse);
+      border: 1px solid var(--border-dim);
       padding: 4px 10px;
-      border-radius: 9999px;
+      border-radius: 100px;
       font-size: 0.75rem;
-      font-weight: 700;
+      font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.05em;
     }
 
-    .btn-logout {
-      background-color: transparent;
-      color: #ef4444;
-      border: 1px solid #fca5a5;
-      padding: 8px 16px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: 600;
-      transition: all 0.2s ease;
-    }
-
-    .btn-logout:hover {
-      background-color: #fef2f2;
-      border-color: #ef4444;
-    }
-
-    .content-area {
+    .admin-content {
       flex: 1;
       padding: 32px;
       overflow-y: auto;

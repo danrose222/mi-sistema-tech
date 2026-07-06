@@ -1,137 +1,193 @@
-@import '@angular/material/prebuilt-themes/azure-blue.css';
-
-/* You can add global styles to this file, and also import other style files */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
 
 :root {
-	/* Paleta CEL SHOP CENTER */
-	--csc-primary: #1f8cff; /* azul eléctrico del logo */
-	--csc-primary-600: #005bb5;
-	--csc-accent: #49ff39; /* verde neón */
-	--csc-accent-700: #33cc2b;
-	--csc-bg: #050814; /* fondo oscuro */
-	--csc-surface: #0f172a; /* superficies oscuras */
-	--csc-text: #f8fafc; /* texto claro */
-	--csc-muted: #94a3b8; /* texto secundario */
-	--csc-border: rgba(79, 99, 181, 0.25); /* bordes suaves azulados */
-	--csc-success: #49ff39;
-	--csc-danger: #f24444;
+  /* Palette — Cel Shop Center */
+  --void: #08080f;
+  --slate: #111827;
+  --signal: #3b82f6;
+  --pulse: #60a5fa;
+  --ash: #9ca3af;
+  --white: #f1f5f9;
+  --danger: #ef4444;
+  --success: #22c55e;
+
+  /* Surfaces */
+  --surface-glass: rgba(17, 24, 39, 0.75);
+  --border-dim: rgba(255, 255, 255, 0.06);
+  --border-hover: rgba(59, 130, 246, 0.4);
+
+  /* Typography */
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-body: 'Inter', sans-serif;
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
 }
+
+/* ── Reset ───────────────────────────────── */
+
+*, *::before, *::after { box-sizing: border-box; }
 
 body {
-	background: radial-gradient(circle at top, rgba(31, 140, 255, 0.12), transparent 30%),
-		linear-gradient(180deg, #070b16 0%, var(--csc-bg) 100%);
-	color: var(--csc-text);
-	font-family: Inter, Roboto, system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', Arial;
-	margin: 0;
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-body);
+  background-color: var(--void);
+  color: var(--white);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
+
+/* ── Scrollbar ───────────────────────────── */
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--slate); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--signal); }
+
+/* ── Logo Mark ───────────────────────────── */
+
+.logo-mark {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--white);
+  letter-spacing: -0.02em;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+  margin: 0;
+  line-height: 1;
+}
+.logo-mark .dot {
+  color: var(--signal);
+}
+
+/* ── Cards ───────────────────────────────── */
+
+.card {
+  background-color: var(--slate);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-dim);
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+.card::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--signal);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.3s ease;
+}
+.card:hover {
+  transform: translateY(-3px);
+  border-color: var(--border-hover);
+}
+.card:hover::after {
+  transform: scaleX(1);
+}
+
+/* ── Buttons ─────────────────────────────── */
 
 .btn-primary {
-	background: linear-gradient(180deg, var(--csc-primary), var(--csc-primary-600));
-	color: white;
-	border: 1px solid rgba(31, 140, 255, 0.85);
-	padding: 10px 14px;
-	border-radius: 999px;
-	cursor: pointer;
-	transition: transform 0.15s ease, box-shadow 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background-color: var(--signal);
+  color: white;
+  border: none;
+  padding: 12px 28px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.15s ease;
+  letter-spacing: 0.01em;
+  line-height: 1;
+}
+.btn-primary:hover:not(:disabled) {
+  background-color: #2563eb;
+  transform: translateY(-1px);
+}
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
-.btn-primary:hover {
-	transform: translateY(-1px);
-	box-shadow: 0 10px 25px rgba(31, 140, 255, 0.25);
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background-color: transparent;
+  color: var(--pulse);
+  border: 1px solid var(--border-dim);
+  padding: 12px 28px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  letter-spacing: 0.01em;
+  line-height: 1;
 }
-
-.btn-accent {
-	background: var(--csc-accent);
-	color: #050814;
-	border: 1px solid var(--csc-accent-700);
-	padding: 10px 14px;
-	border-radius: 999px;
-	cursor: pointer;
+.btn-ghost:hover:not(:disabled) {
+  border-color: var(--signal);
+  background-color: rgba(59, 130, 246, 0.08);
 }
 
 .btn-danger {
-	background: var(--csc-danger);
-	color: white;
-	border: none;
-	padding: 8px 12px;
-	border-radius: 6px;
-	cursor: pointer;
+  background-color: transparent;
+  color: var(--danger);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  padding: 10px 20px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.btn-danger:hover {
+  background-color: rgba(239, 68, 68, 0.1);
+  border-color: var(--danger);
 }
 
-/* Admin layout */
-.admin-layout { display:flex; height:100vh; }
-.admin-nav {
-	width:240px;
-	background: linear-gradient(180deg, rgba(16, 52, 124, 0.95), rgba(4, 18, 44, 1));
-	color: #fff;
-	padding: 24px 18px;
-	box-shadow: 4px 0 30px rgba(0, 0, 0, 0.25);
-}
-.admin-nav h3 { margin:0 0 18px 0; color: #9ecbff; letter-spacing: 0.06em; text-transform: uppercase; font-size: 18px; }
-.admin-nav ul { list-style:none; padding:0; margin:0 }
-.admin-nav a { color: rgba(255,255,255,0.92); text-decoration:none; display:block; padding:10px 0; border-bottom: 1px solid rgba(255,255,255,0.08); }
-.admin-nav a:hover { color: var(--csc-accent); }
-.admin-nav .logout-btn { margin-top:24px; display:block }
-.admin-main { flex:1; padding:28px; overflow:auto; background: transparent; }
-
-.card {
-	background: rgba(10, 18, 39, 0.95);
-	border: 1px solid rgba(79, 99, 181, 0.35);
-	padding:18px;
-	border-radius:16px;
-	box-shadow: 0 18px 60px rgba(0, 0, 0, 0.25);
-}
+/* ── Form Inputs ─────────────────────────── */
 
 .form-input {
-	padding:12px;
-	border:1px solid rgba(79, 99, 181, 0.35);
-	border-radius:10px;
-	width:100%;
-	background: rgba(255,255,255,0.05);
-	color: var(--csc-text);
+  width: 100%;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-dim);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  color: var(--white);
+  transition: border-color 0.2s ease;
+  outline: none;
+  box-sizing: border-box;
+}
+.form-input:focus {
+  border-color: var(--signal);
+}
+.form-input::placeholder {
+  color: var(--ash);
 }
 
-input, select, textarea {
-	color: var(--csc-text);
-}
+/* ── Material Overrides (Dark) ───────────── */
 
-h1, h2, h3, h4, h5, h6 {
-	color: #eef2ff;
-}
-
-label {
-	display:block;
-	margin-bottom: 12px;
-	color: var(--csc-muted);
-}
-
-.login-page {
-	display:flex;
-	min-height:100vh;
-	justify-content:center;
-	align-items:center;
-	padding:24px;
-	background: radial-gradient(circle at top left, rgba(31, 140, 255, 0.15), transparent 25%),
-		linear-gradient(180deg, #050814 0%, #0f172a 100%);
-}
-
-.login-card {
-	max-width: 420px;
-	width: 100%;
-	padding: 32px;
-	border-radius: 24px;
-	background: rgba(8, 17, 38, 0.92);
-	border: 1px solid rgba(79, 99, 181, 0.35);
-	box-shadow: 0 20px 80px rgba(0,0,0,0.35);
-}
-
-.login-card h1 {
-	margin-bottom: 20px;
-	font-size: 2rem;
-	color: #eef2ff;
-}
-
-.login-card button {
-	width: 100%;
-}
-
+.mat-mdc-card { background: transparent !important; box-shadow: none !important; }
+.mdc-button { font-family: var(--font-display) !important; }
+.mat-mdc-menu-panel { background: var(--slate) !important; border: 1px solid var(--border-dim) !important; }
+.mat-mdc-menu-item { color: var(--white) !important; }
+.mat-mdc-menu-item:hover { background: rgba(255,255,255,0.05) !important; }

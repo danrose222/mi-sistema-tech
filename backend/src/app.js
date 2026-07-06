@@ -7,7 +7,18 @@ const compression = require('compression');
 const app = express();
 
 // 1. Helmet: Protege seteando varios HTTP headers de seguridad
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"], // Por defecto solo permite recursos del mismo origen
+      scriptSrc: ["'self'"], // Permite scripts (JS) solo del mismo origen
+      styleSrc: ["'self'"], // Permite hojas de estilo (CSS) solo del mismo origen
+      fontSrc: ["'self'"], // Permite fuentes tipográficas solo del mismo origen
+      imgSrc: ["'self'", "data:"], // Permite imágenes del mismo origen y codificadas en base64 (data:)
+      connectSrc: ["'self'"], // Permite conexiones (fetch/XHR/websockets) al mismo origen
+    },
+  },
+}));
 
 // 2. Compression: Mejora el rendimiento comprimiendo las respuestas (GZIP)
 app.use(compression());

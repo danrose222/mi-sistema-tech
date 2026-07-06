@@ -10,6 +10,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatBadgeModule } from '@angular/material/badge';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { CreditosService, Credito, Cuota } from '../../../services/creditos.service';
 import { NuevaCuotaDialogComponent } from '../nueva-cuota-dialog/nueva-cuota-dialog.component';
@@ -25,7 +26,8 @@ import { NuevaCuotaDialogComponent } from '../nueva-cuota-dialog/nueva-cuota-dia
     MatProgressBarModule,
     MatCardModule,
     MatDividerModule,
-    MatBadgeModule
+    MatBadgeModule,
+    MatTooltipModule
   ],
   template: `
     <div class="page-container">
@@ -47,7 +49,7 @@ import { NuevaCuotaDialogComponent } from '../nueva-cuota-dialog/nueva-cuota-dia
           
           <!-- Columna Izquierda: Info General -->
           <div class="col-left">
-            <mat-card class="info-card mat-elevation-z2">
+            <mat-card class="info-card clean-card">
               <mat-card-header>
                 <mat-card-title>Información General</mat-card-title>
                 <mat-card-subtitle>
@@ -100,7 +102,7 @@ import { NuevaCuotaDialogComponent } from '../nueva-cuota-dialog/nueva-cuota-dia
 
           <!-- Columna Derecha: Cuotas -->
           <div class="col-right">
-            <mat-card class="cuotas-card mat-elevation-z2">
+            <mat-card class="cuotas-card clean-card">
               <mat-card-header>
                 <mat-card-title>Plan de Cuotas</mat-card-title>
               </mat-card-header>
@@ -158,15 +160,16 @@ import { NuevaCuotaDialogComponent } from '../nueva-cuota-dialog/nueva-cuota-dia
       align-items: center;
       background: white;
       padding: 12px 24px;
-      border-radius: 8px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      border-radius: var(--border-radius-card);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--csc-border-color);
     }
     .title-group {
       display: flex;
       align-items: center;
       gap: 12px;
     }
-    .page-title { margin: 0; color: #1e293b; font-weight: 600; font-size: 1.25rem; }
+    .page-title { margin: 0; color: var(--csc-brand-primary); font-weight: 700; font-size: 1.5rem; font-family: var(--font-display); }
     
     .loading-shade {
       display: flex;
@@ -182,8 +185,8 @@ import { NuevaCuotaDialogComponent } from '../nueva-cuota-dialog/nueva-cuota-dia
     }
     
     /* Info Card */
-    .info-card { border-radius: 12px; }
-    .cuotas-card { border-radius: 12px; }
+    .info-card { border-radius: var(--border-radius-card); background: white !important; color: var(--csc-text-primary); box-shadow: none !important;}
+    .cuotas-card { border-radius: var(--border-radius-card); background: white !important; color: var(--csc-text-primary); box-shadow: none !important;}
     .info-list {
       display: flex;
       flex-direction: column;
@@ -194,18 +197,18 @@ import { NuevaCuotaDialogComponent } from '../nueva-cuota-dialog/nueva-cuota-dia
       display: flex;
       flex-direction: column;
     }
-    .label { font-size: 0.85rem; color: #64748b; }
-    .value { font-size: 1.05rem; color: #1e293b; }
+    .label { font-size: 0.85rem; color: var(--csc-text-muted); }
+    .value { font-size: 1.05rem; color: var(--csc-text-primary); }
     .fw-600 { font-weight: 600; }
     .capitalize { text-transform: capitalize; }
-    .italic { font-style: italic; color: #475569; font-size: 0.95rem; background: #f8fafc; padding: 8px; border-radius: 6px;}
+    .italic { font-style: italic; color: var(--csc-text-muted); font-size: 0.95rem; background: var(--csc-bg-light); padding: 8px; border-radius: var(--border-radius-input);}
     .mt-1 { display: inline-block; margin-top: 4px; }
     .mt-2 { margin-top: 8px; }
 
     .progress-section {
       margin-top: 32px;
       padding-top: 16px;
-      border-top: 1px solid #e2e8f0;
+      border-top: 1px solid var(--csc-border-color);
     }
     .progress-labels {
       display: flex;
@@ -239,12 +242,12 @@ import { NuevaCuotaDialogComponent } from '../nueva-cuota-dialog/nueva-cuota-dia
       justify-content: space-between;
       align-items: center;
       padding: 16px 24px;
-      border-bottom: 1px solid #f1f5f9;
+      border-bottom: 1px solid var(--csc-border-color);
       transition: background-color 0.2s;
     }
-    .cuota-item:hover { background-color: #f8fafc; }
+    .cuota-item:hover { background-color: var(--csc-bg-light); }
     .cuota-item:last-child { border-bottom: none; }
-    .cuota-item.is-morosa { background-color: #fff1f2; }
+    .cuota-item.is-morosa { background-color: #fef2f2; }
     
     .cuota-info {
       display: flex;
@@ -252,8 +255,8 @@ import { NuevaCuotaDialogComponent } from '../nueva-cuota-dialog/nueva-cuota-dia
       gap: 16px;
     }
     .cuota-num {
-      background: #f1f5f9;
-      color: #475569;
+      background: var(--csc-bg-light);
+      color: var(--csc-text-muted);
       font-weight: 700;
       font-size: 1.1rem;
       width: 44px;
@@ -267,10 +270,10 @@ import { NuevaCuotaDialogComponent } from '../nueva-cuota-dialog/nueva-cuota-dia
       display: flex;
       flex-direction: column;
     }
-    .cuota-amount { font-weight: 700; font-size: 1.1rem; color: #0f172a; }
-    .cuota-date { font-size: 0.85rem; color: #64748b; }
-    .cuota-saldo { font-size: 0.85rem; color: #0ea5e9; font-weight: 500; }
-    .text-warn { color: #dc2626 !important; font-weight: 500; }
+    .cuota-amount { font-weight: 700; font-size: 1.1rem; color: var(--csc-text-primary); }
+    .cuota-date { font-size: 0.85rem; color: var(--csc-text-muted); }
+    .cuota-saldo { font-size: 0.85rem; color: var(--csc-brand-primary); font-weight: 500; }
+    .text-warn { color: var(--csc-danger) !important; font-weight: 500; }
 
     .cuota-status {
       display: flex;
@@ -287,9 +290,9 @@ import { NuevaCuotaDialogComponent } from '../nueva-cuota-dialog/nueva-cuota-dia
     .status-dot.vencida { background: #ef4444; }
     
     .status-text { font-weight: 600; font-size: 0.9rem; }
-    .status-text.pendiente { color: #64748b; }
-    .status-text.pagada { color: #16a34a; }
-    .status-text.vencida { color: #dc2626; }
+    .status-text.pendiente { color: var(--csc-text-muted); }
+    .status-text.pagada { color: var(--csc-success); }
+    .status-text.vencida { color: var(--csc-danger); }
 
     .btn-pay { margin-left: 12px; }
     .check-icon { color: #22c55e; margin-left: 12px; font-size: 28px; width: 28px; height: 28px; }
