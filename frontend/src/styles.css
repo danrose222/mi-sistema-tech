@@ -1,1 +1,137 @@
+@import '@angular/material/prebuilt-themes/azure-blue.css';
+
 /* You can add global styles to this file, and also import other style files */
+
+:root {
+	/* Paleta CEL SHOP CENTER */
+	--csc-primary: #1f8cff; /* azul eléctrico del logo */
+	--csc-primary-600: #005bb5;
+	--csc-accent: #49ff39; /* verde neón */
+	--csc-accent-700: #33cc2b;
+	--csc-bg: #050814; /* fondo oscuro */
+	--csc-surface: #0f172a; /* superficies oscuras */
+	--csc-text: #f8fafc; /* texto claro */
+	--csc-muted: #94a3b8; /* texto secundario */
+	--csc-border: rgba(79, 99, 181, 0.25); /* bordes suaves azulados */
+	--csc-success: #49ff39;
+	--csc-danger: #f24444;
+}
+
+body {
+	background: radial-gradient(circle at top, rgba(31, 140, 255, 0.12), transparent 30%),
+		linear-gradient(180deg, #070b16 0%, var(--csc-bg) 100%);
+	color: var(--csc-text);
+	font-family: Inter, Roboto, system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', Arial;
+	margin: 0;
+}
+
+.btn-primary {
+	background: linear-gradient(180deg, var(--csc-primary), var(--csc-primary-600));
+	color: white;
+	border: 1px solid rgba(31, 140, 255, 0.85);
+	padding: 10px 14px;
+	border-radius: 999px;
+	cursor: pointer;
+	transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn-primary:hover {
+	transform: translateY(-1px);
+	box-shadow: 0 10px 25px rgba(31, 140, 255, 0.25);
+}
+
+.btn-accent {
+	background: var(--csc-accent);
+	color: #050814;
+	border: 1px solid var(--csc-accent-700);
+	padding: 10px 14px;
+	border-radius: 999px;
+	cursor: pointer;
+}
+
+.btn-danger {
+	background: var(--csc-danger);
+	color: white;
+	border: none;
+	padding: 8px 12px;
+	border-radius: 6px;
+	cursor: pointer;
+}
+
+/* Admin layout */
+.admin-layout { display:flex; height:100vh; }
+.admin-nav {
+	width:240px;
+	background: linear-gradient(180deg, rgba(16, 52, 124, 0.95), rgba(4, 18, 44, 1));
+	color: #fff;
+	padding: 24px 18px;
+	box-shadow: 4px 0 30px rgba(0, 0, 0, 0.25);
+}
+.admin-nav h3 { margin:0 0 18px 0; color: #9ecbff; letter-spacing: 0.06em; text-transform: uppercase; font-size: 18px; }
+.admin-nav ul { list-style:none; padding:0; margin:0 }
+.admin-nav a { color: rgba(255,255,255,0.92); text-decoration:none; display:block; padding:10px 0; border-bottom: 1px solid rgba(255,255,255,0.08); }
+.admin-nav a:hover { color: var(--csc-accent); }
+.admin-nav .logout-btn { margin-top:24px; display:block }
+.admin-main { flex:1; padding:28px; overflow:auto; background: transparent; }
+
+.card {
+	background: rgba(10, 18, 39, 0.95);
+	border: 1px solid rgba(79, 99, 181, 0.35);
+	padding:18px;
+	border-radius:16px;
+	box-shadow: 0 18px 60px rgba(0, 0, 0, 0.25);
+}
+
+.form-input {
+	padding:12px;
+	border:1px solid rgba(79, 99, 181, 0.35);
+	border-radius:10px;
+	width:100%;
+	background: rgba(255,255,255,0.05);
+	color: var(--csc-text);
+}
+
+input, select, textarea {
+	color: var(--csc-text);
+}
+
+h1, h2, h3, h4, h5, h6 {
+	color: #eef2ff;
+}
+
+label {
+	display:block;
+	margin-bottom: 12px;
+	color: var(--csc-muted);
+}
+
+.login-page {
+	display:flex;
+	min-height:100vh;
+	justify-content:center;
+	align-items:center;
+	padding:24px;
+	background: radial-gradient(circle at top left, rgba(31, 140, 255, 0.15), transparent 25%),
+		linear-gradient(180deg, #050814 0%, #0f172a 100%);
+}
+
+.login-card {
+	max-width: 420px;
+	width: 100%;
+	padding: 32px;
+	border-radius: 24px;
+	background: rgba(8, 17, 38, 0.92);
+	border: 1px solid rgba(79, 99, 181, 0.35);
+	box-shadow: 0 20px 80px rgba(0,0,0,0.35);
+}
+
+.login-card h1 {
+	margin-bottom: 20px;
+	font-size: 2rem;
+	color: #eef2ff;
+}
+
+.login-card button {
+	width: 100%;
+}
+

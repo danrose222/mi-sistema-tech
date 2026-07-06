@@ -1,0 +1,170 @@
+import { Component, inject, OnInit, signal } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
+import { MatButtonModule } from '@angular/material/button';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatDividerModule } from '@angular/material/divider';
+import { ClientesService, Cliente } from '../../../services/clientes.service';
+
+@Component({
+  selector: 'app-cliente-detalle',
+  standalone: true,
+  imports: [
+    CommonModule, 
+    MatDialogModule, 
+    MatButtonModule, 
+    MatProgressSpinnerModule,
+    MatDividerModule
+  ],
+  template: `
+    <h2 mat-dialog-title>Detalle del Cliente</h2>
+    <mat-dialog-content>
+      @if (isLoading()) {
+        <div class="loading-container">
+          <mat-spinner diameter="40"></mat-spinner>
+        </div>
+      } @else if (cliente()) {
+        <div class="detalle-container">
+          <div class="info-card">
+            <h3>Información Personal</h3>
+            <div class="info-row"><span class="label">Nombre:</span> <span class="value">{{ cliente()?.nombre }}</span></div>
+            <div class="info-row"><span class="label">Email:</span> <span class="value">{{ cliente()?.email || 'No registrado' }}</span></div>
+            <div class="info-row"><span class="label">Teléfono:</span> <span class="value">{{ cliente()?.telefono || 'No registrado' }}</span></div>
+            <div class="info-row"><span class="label">Dirección:</span> <span class="value">{{ cliente()?.direccion || 'No registrada' }}</span></div>
+            <div class="info-row"><span class="label">Fecha alta:</span> <span class="value">{{ cliente()?.created_at | date:'dd/MM/yyyy HH:mm' }}</span></div>
+          </div>
+          
+          <mat-divider></mat-divider>
+          
+          <div class="info-card">
+            <h3>Notas</h3>
+            <p class="notas-text">{{ cliente()?.notas || 'Sin notas adicionales.' }}</p>
+          </div>
+          
+          <mat-divider></mat-divider>
+          
+          <div class="info-card">
+            <h3>Estado Financiero / Historial</h3>
+            <p class="muted-text">
+              <i class="material-icons info-icon">info</i>
+              El historial de pedidos y estado de cuenta corriente se obtendrán de módulos complementarios.
+            </p>
+            <ul class="mock-list">
+              <li><strong>Saldo adeudado:</strong> <span class="badge gray">--</span></li>
+              <li><strong>Créditos activos:</strong> <span class="badge gray">--</span></li>
+              <li><strong>Último pedido:</strong> <span class="badge gray">--</span></li>
+            </ul>
+          </div>
+        </div>
+      } @else {
+        <p class="error-msg">No se encontró información del cliente.</p>
+      }
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      <button mat-button mat-dialog-close>Cerrar</button>
+    </mat-dialog-actions>
+  `,
+  styles: [`
+    .loading-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 60px 0;
+    }
+    .detalle-container {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      min-width: 450px;
+      padding-top: 8px;
+    }
+    .info-card h3 {
+      margin-top: 0;
+      margin-bottom: 12px;
+      color: #3f51b5;
+      font-size: 1.1rem;
+    }
+    .info-row {
+      display: flex;
+      margin-bottom: 8px;
+      font-size: 0.95rem;
+    }
+    .label {
+      font-weight: 500;
+      width: 120px;
+      color: #555;
+    }
+    .value {
+      flex: 1;
+      color: #111;
+    }
+    .notas-text {
+      background: #f5f5f5;
+      padding: 12px;
+      border-radius: 6px;
+      font-style: italic;
+      margin: 0;
+    }
+    .muted-text {
+      color: #777;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .info-icon {
+      font-size: 1.2rem;
+    }
+    .mock-list {
+      list-style: none;
+      padding: 0;
+      margin-top: 12px;
+    }
+    .mock-list li {
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px dashed #eee;
+      padding-bottom: 4px;
+    }
+    .badge {
+      background: #eee;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.8rem;
+    }
+    .error-msg {
+      color: #f44336;
+      text-align: center;
+    }
+  `]
+})
+export class ClienteDetalleComponent implements OnInit {
+  dialogRef = inject(MatDialogRef<ClienteDetalleComponent>);
+  data = inject(MAT_DIALOG_DATA);
+  clientesService = inject(ClientesService);
+
+  cliente = signal<Cliente | null>(null);
+  isLoading = signal(true);
+
+  ngOnInit() {
+    if (this.data?.clienteId) {
+      this.cargarDetalle(this.data.clienteId);
+    } else {
+      this.isLoading.set(false);
+    }
+  }
+
+  cargarDetalle(id: number) {
+    this.clientesService.obtener(id).subscribe({
+      next: (res) => {
+        this.cliente.set(res.data);
+        this.isLoading.set(false);
+      },
+      error: (err) => {
+        console.error(err);
+        this.isLoading.set(false);
+      }
+    });
+  }
+}

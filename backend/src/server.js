@@ -1,19 +1,23 @@
 require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
 const db = require('./config/database');
+const runMigrations = require('./migrations/runMigrations');
+const app = require('./app');
 
-const app = express();
-app.use(cors()); 
-app.use(express.json()); 
-app.get('/', (req, res) => {
-    res.json({ mensaje: '¡Bienvenido a la API del sistema de gestión!' });
-});
+require('./cron/vencimientosCron');
 
-const clienteRoutes = require('./routes/clienteRoutes');
-app.use('/api/clientes', clienteRoutes);
+const cronService = require('./services/cron.service');
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`🚀 Servidor backend corriendo en http://localhost:${PORT}`);
-});
+
+(async () => {
+    try {
+        await runMigrations();
+        app.listen(PORT, () => {
+            console.log(`🚀 Servidor backend corriendo en http://localhost:${PORT}`);
+            cronService.iniciarCrons(db);
+        });
+    } catch (err) {
+        console.error('No se pudieron aplicar migraciones:', err.message || err);
+        process.exit(1);
+    }
+})();
