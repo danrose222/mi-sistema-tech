@@ -1,4 +1,5 @@
-import { Component, inject, OnInit, signal, computed } from '@angular/core';
+import { Component, inject, OnInit, signal, computed, effect } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -18,6 +19,7 @@ import { of } from 'rxjs';
 
 import { CreditosService } from '../../../services/creditos.service';
 import { ClientesService, Cliente } from '../../../services/clientes.service';
+import { ProductosService, Producto } from '../../../services/productos.service';
 
 @Component({
   selector: 'app-nuevo-credito',
@@ -76,10 +78,38 @@ import { ClientesService, Cliente } from '../../../services/clientes.service';
               </form>
             </mat-step>
 
-            <!-- Paso 2: Detalles del Crédito -->
+            <!-- Paso 2: Producto -->
+            <mat-step [stepControl]="productoFormGroup">
+              <form [formGroup]="productoFormGroup">
+                <ng-template matStepLabel>Seleccionar Producto</ng-template>
+                <div class="step-content">
+                  <p class="step-desc">Busque y seleccione el producto que se está financiando.</p>
+
+                  <mat-form-field appearance="outline" class="full-width search-field">
+                    <mat-label>Buscar producto...</mat-label>
+                    <input matInput type="text" formControlName="productoSearch" [matAutocomplete]="autoProducto" placeholder="Nombre o SKU...">
+                    <mat-autocomplete #autoProducto="matAutocomplete" [displayWith]="displayProducto">
+                      @for (producto of productosFiltrados(); track producto.id) {
+                        <mat-option [value]="producto">
+                          {{ producto.nombre }} <span class="muted-text">({{ producto.precio | currency:'ARS':'symbol':'1.0-0' }} · stock: {{ producto.stock }})</span>
+                        </mat-option>
+                      }
+                    </mat-autocomplete>
+                    <mat-icon matSuffix>inventory_2</mat-icon>
+                  </mat-form-field>
+                </div>
+
+                <div class="step-actions">
+                  <button mat-button matStepperPrevious>Atrás</button>
+                  <button mat-flat-button color="primary" matStepperNext [disabled]="!isProductoSeleccionado()">Continuar</button>
+                </div>
+              </form>
+            </mat-step>
+
+            <!-- Paso 3: Configurar Pago -->
             <mat-step [stepControl]="creditoFormGroup">
               <form [formGroup]="creditoFormGroup">
-                <ng-template matStepLabel>Datos del Crédito</ng-template>
+                <ng-template matStepLabel>Configurar Pago</ng-template>
                 <div class="step-content form-grid">
                   
                   <mat-form-field appearance="outline">
@@ -132,13 +162,14 @@ import { ClientesService, Cliente } from '../../../services/clientes.service';
               </form>
             </mat-step>
 
-            <!-- Paso 3: Confirmación -->
+            <!-- Paso 4: Confirmación -->
             <mat-step>
               <ng-template matStepLabel>Confirmación</ng-template>
               <div class="step-content">
                 <h3 class="summary-title">Resumen Final del Crédito</h3>
                 <div class="summary-box">
                   <div class="summary-row"><span>Cliente:</span> <strong>{{ clienteSeleccionado()?.nombre }}</strong></div>
+                  <div class="summary-row"><span>Producto financiado:</span> <strong>{{ productoSeleccionado()?.nombre }}</strong></div>
                   <div class="summary-row"><span>Monto Total a financiar:</span> <strong>{{ creditoFormGroup.get('montoTotal')?.value | currency:'ARS' }}</strong></div>
                   <div class="summary-row"><span>Plan de pagos:</span> <strong>{{ creditoFormGroup.get('cantidadCuotas')?.value }} cuotas ({{ creditoFormGroup.get('frecuencia')?.value }})</strong></div>
                   <div class="summary-row highlight"><span>Valor aprox. por Cuota:</span> <strong>{{ montoCuotaCalculado() | currency:'ARS' }}</strong></div>
@@ -273,15 +304,21 @@ export class NuevoCreditoComponent implements OnInit {
   private fb = inject(FormBuilder);
   private creditosService = inject(CreditosService);
   private clientesService = inject(ClientesService);
+  private productosService = inject(ProductosService);
   private router = inject(Router);
   private snackBar = inject(MatSnackBar);
 
   isSubmitting = signal(false);
   clientesFiltrados = signal<Cliente[]>([]);
+  productosFiltrados = signal<Producto[]>([]);
 
   // Forms
   clienteFormGroup = this.fb.group({
     clienteSearch: ['', Validators.required]
+  });
+
+  productoFormGroup = this.fb.group({
+    productoSearch: ['', Validators.required]
   });
 
   creditoFormGroup = this.fb.group({
@@ -292,23 +329,55 @@ export class NuevoCreditoComponent implements OnInit {
     notas: ['']
   });
 
+  // `computed()` solo reacciona a lecturas de Signals: leer `FormGroup.get().value`
+  // directamente adentro de un `computed` lo deja "congelado" en su valor inicial
+  // para siempre (nunca se vuelve a evaluar), que era la causa real de que el
+  // stepper quedara trabado aunque el cliente sí se seleccionara. Convertimos
+  // los `valueChanges` a Signal con `toSignal` para que sí sean reactivos.
+  private clienteSearchValue = toSignal(this.clienteFormGroup.get('clienteSearch')!.valueChanges, {
+    initialValue: this.clienteFormGroup.get('clienteSearch')!.value
+  });
+  private productoSearchValue = toSignal(this.productoFormGroup.get('productoSearch')!.valueChanges, {
+    initialValue: this.productoFormGroup.get('productoSearch')!.value
+  });
+  private creditoFormValue = toSignal(this.creditoFormGroup.valueChanges, {
+    initialValue: this.creditoFormGroup.getRawValue()
+  });
+
   clienteSeleccionado = computed(() => {
-    const val = this.clienteFormGroup.get('clienteSearch')?.value;
+    const val = this.clienteSearchValue();
     return typeof val === 'object' && val !== null ? (val as Cliente) : null;
   });
 
-  isClienteSeleccionado = computed(() => {
-    return this.clienteSeleccionado() !== null;
+  isClienteSeleccionado = computed(() => this.clienteSeleccionado() !== null);
+
+  productoSeleccionado = computed(() => {
+    const val = this.productoSearchValue();
+    return typeof val === 'object' && val !== null ? (val as Producto) : null;
   });
 
+  isProductoSeleccionado = computed(() => this.productoSeleccionado() !== null);
+
   montoCuotaCalculado = computed(() => {
-    const total = Number(this.creditoFormGroup.get('montoTotal')?.value);
-    const cuotas = Number(this.creditoFormGroup.get('cantidadCuotas')?.value);
+    const v = this.creditoFormValue();
+    const total = Number(v.montoTotal);
+    const cuotas = Number(v.cantidadCuotas);
     if (total && cuotas && cuotas > 0) {
       return total / cuotas;
     }
     return 0;
   });
+
+  constructor() {
+    // Al elegir un producto, autocompletamos el Monto Total con su precio
+    // (el campo queda editable por si el monto final difiere, ej. con seña).
+    effect(() => {
+      const producto = this.productoSeleccionado();
+      if (producto) {
+        this.creditoFormGroup.get('montoTotal')?.setValue(String(producto.precio));
+      }
+    });
+  }
 
   ngOnInit() {
     // Autocomplete con debounce buscando clientes
@@ -325,14 +394,34 @@ export class NuevoCreditoComponent implements OnInit {
         this.clientesFiltrados.set(res.data || []);
       }
     });
+
+    // Autocomplete con debounce buscando productos
+    this.productoFormGroup.get('productoSearch')?.valueChanges.pipe(
+      debounceTime(400),
+      distinctUntilChanged(),
+      switchMap(value => {
+        const searchStr = typeof value === 'string' ? value : (value as any)?.nombre || '';
+        if (!searchStr) return of({ data: [] });
+        return this.productosService.listar(1, 10, searchStr);
+      })
+    ).subscribe({
+      next: (res) => {
+        this.productosFiltrados.set(res.data || []);
+      }
+    });
   }
 
   displayCliente(cliente: Cliente): string {
     return cliente && cliente.nombre ? cliente.nombre : '';
   }
 
+  displayProducto(producto: Producto): string {
+    return producto && producto.nombre ? producto.nombre : '';
+  }
+
   confirmarCredito() {
-    if (this.clienteFormGroup.invalid || this.creditoFormGroup.invalid || !this.clienteSeleccionado()) {
+    if (this.clienteFormGroup.invalid || this.productoFormGroup.invalid || this.creditoFormGroup.invalid
+        || !this.clienteSeleccionado() || !this.productoSeleccionado()) {
       return;
     }
 
@@ -340,6 +429,7 @@ export class NuevoCreditoComponent implements OnInit {
 
     const payload = {
       clienteId: this.clienteSeleccionado()!.id,
+      productoId: this.productoSeleccionado()!.id,
       montoTotal: this.creditoFormGroup.value.montoTotal,
       cantidadCuotas: this.creditoFormGroup.value.cantidadCuotas,
       frecuencia: this.creditoFormGroup.value.frecuencia,

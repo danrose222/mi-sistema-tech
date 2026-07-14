@@ -1,59 +1,62 @@
-const mercadopago = require('mercadopago');
+const { MercadoPagoConfig, Preference, Payment, MerchantOrder, WebhookSignatureValidator } = require('mercadopago');
 
-// Inicializa el SDK de MercadoPago de manera defensiva (varios paquetes exponen APIs distintas)
 const MP_TOKEN = process.env.MP_ACCESS_TOKEN || '';
-try {
-  if (mercadopago && mercadopago.configurations && typeof mercadopago.configurations.setAccessToken === 'function') {
-    mercadopago.configurations.setAccessToken(MP_TOKEN);
-  } else if (typeof mercadopago.configure === 'function') {
-    mercadopago.configure({ access_token: MP_TOKEN });
-  } else if (typeof mercadopago.setAccessToken === 'function') {
-    mercadopago.setAccessToken(MP_TOKEN);
-  } else {
-    console.warn('Advertencia: no se pudo inicializar MercadoPago automáticamente. Verifica la versión del SDK y la variable MP_ACCESS_TOKEN.');
-  }
-} catch (err) {
-  console.warn('Error al inicializar MercadoPago:', err && err.message ? err.message : err);
-}
+const mpClient = new MercadoPagoConfig({ accessToken: MP_TOKEN });
+const preferenceClient = new Preference(mpClient);
+const paymentClient = new Payment(mpClient);
+const merchantOrderClient = new MerchantOrder(mpClient);
 
 exports.crearPreference = async ({ items, payer, external_reference, back_urls }) => {
-  const preference = {
-    items,
-    payer,
-    external_reference,
-    back_urls,
-    auto_return: 'approved',
-    payment_methods: {
-      excluded_payment_types: [{ id: 'ticket' }],
-      installments: 12
+  const response = await preferenceClient.create({
+    body: {
+      items,
+      payer,
+      external_reference,
+      back_urls,
+      auto_return: 'approved',
+      payment_methods: {
+        excluded_payment_types: [{ id: 'ticket' }],
+        installments: 12
+      }
     }
-  };
-
-  const response = await mercadopago.preferences.create(preference);
-  return response.body;
+  });
+  return response;
 };
 
 exports.obtenerPago = async (paymentId) => {
-  const response = await mercadopago.payment.findById(paymentId);
-  return response.body;
+  return paymentClient.get({ id: paymentId });
 };
 
 exports.obtenerOrden = async (merchantOrderId) => {
-  const response = await mercadopago.merchant_orders.findById(merchantOrderId);
-  return response.body;
+  return merchantOrderClient.get({ merchantOrderId });
 };
 
-exports.validarWebhook = (body, headers) => {
-  const topic = headers['x-meli-topic'] || headers['x-mp-topic'] || headers['x-mercadopago-topic'];
-  
-  // Validacion de firma basica
-  const signature = headers['x-signature'];
-  if (!signature && process.env.NODE_ENV !== 'test') { // Permitir sin firma solo en test si es necesario, pero como el test prueba la firma, lo forzaremos
-      // O throw siempre si es requerido
+/**
+ * Valida la firma HMAC del webhook contra MP_WEBHOOK_SECRET (algoritmo oficial de MercadoPago).
+ * Sin secreto configurado no hay forma de distinguir una notificación real de una forjada,
+ * así que se rechaza el webhook en vez de aceptarlo "a ciegas".
+ */
+exports.validarWebhook = (body, headers, query = {}) => {
+  const topic = headers['x-meli-topic'] || headers['x-mp-topic'] || headers['x-mercadopago-topic'] || body.type;
+  const dataId = query['data.id'] || query.id || (body && body.data && body.data.id) || (body && body.id);
+  const secret = process.env.MP_WEBHOOK_SECRET;
+
+  if (!secret) {
+    throw new Error('Firma inválida');
   }
-  
-  if (headers['x-signature'] === 'invalid') {
-      throw new Error('Firma inválida');
+
+  try {
+    // No se pasa toleranceSeconds: el `ts` que envía MercadoPago viene en segundos y el
+    // validador lo compara contra Date.now() en milisegundos, así que fijar una tolerancia
+    // aquí rechazaría webhooks legítimos. La comprobación de firma HMAC sigue siendo obligatoria.
+    WebhookSignatureValidator.validate({
+      xSignature: headers['x-signature'],
+      xRequestId: headers['x-request-id'],
+      dataId,
+      secret
+    });
+  } catch (err) {
+    throw new Error('Firma inválida');
   }
 
   return { topic, data: body };

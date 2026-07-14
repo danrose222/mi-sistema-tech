@@ -44,10 +44,10 @@ import { ClienteDetalleComponent } from './cliente-detalle/cliente-detalle.compo
       </div>
 
       <div class="filters-container">
-        <mat-form-field appearance="outline" class="search-field">
+        <mat-form-field appearance="outline" class="search-field" floatLabel="always">
           <mat-label>Buscar cliente...</mat-label>
           <mat-icon matPrefix>search</mat-icon>
-          <input matInput [formControl]="searchControl" placeholder="Escribí nombre, email o teléfono">
+          <input matInput [formControl]="searchControl" placeholder="Escribí nombre, email o teléfono" style="color: white !important;">
           @if (searchControl.value) {
             <button matSuffix mat-icon-button (click)="searchControl.setValue('')">
               <mat-icon>close</mat-icon>
@@ -68,7 +68,14 @@ import { ClienteDetalleComponent } from './cliente-detalle/cliente-detalle.compo
           <!-- Nombre Column -->
           <ng-container matColumnDef="nombre">
             <th mat-header-cell *matHeaderCellDef> Nombre </th>
-            <td mat-cell *matCellDef="let element" class="fw-500"> {{element.nombre}} </td>
+            <td mat-cell *matCellDef="let element" class="fw-500">
+              {{element.nombre}}
+              @if (element.historial_crediticio === 'Bueno' || element.historial_crediticio === 'Excelente') {
+                <span class="badge-historial" [class.excelente]="element.historial_crediticio === 'Excelente'" matTooltip="Historial crediticio: {{element.historial_crediticio}}">
+                  <mat-icon>verified</mat-icon> Cliente Cumplidor
+                </span>
+              }
+            </td>
           </ng-container>
 
           <!-- Telefono Column -->
@@ -156,6 +163,39 @@ import { ClienteDetalleComponent } from './cliente-detalle/cliente-detalle.compo
       width: 100%;
       max-width: 450px;
     }
+    /* El buscador vive sobre el fondo oscuro de la página (--void), no dentro
+       de una tarjeta blanca. El tema Material por defecto pinta el texto del
+       input en color oscuro -> texto casi invisible. Se fuerza alto contraste. */
+    .search-field ::ng-deep .mat-mdc-text-field-wrapper {
+      background-color: var(--slate);
+      border-radius: var(--radius-sm);
+    }
+    .search-field ::ng-deep input.mat-mdc-input-element {
+      color: var(--white) !important;
+      caret-color: var(--white);
+    }
+    .search-field ::ng-deep input.mat-mdc-input-element::placeholder {
+      color: var(--ash) !important;
+      opacity: 1;
+    }
+    .search-field ::ng-deep .mat-mdc-floating-label {
+      color: var(--ash) !important;
+    }
+    .search-field ::ng-deep .mat-mdc-form-field-icon-prefix > .mat-icon,
+    .search-field ::ng-deep .mat-mdc-form-field-icon-suffix > .mat-icon {
+      color: var(--ash);
+    }
+    .search-field ::ng-deep .mdc-notched-outline__leading,
+    .search-field ::ng-deep .mdc-notched-outline__notch,
+    .search-field ::ng-deep .mdc-notched-outline__trailing {
+      border-color: var(--border-dim) !important;
+    }
+    .search-field ::ng-deep .mat-mdc-form-field.mat-focused .mdc-notched-outline__leading,
+    .search-field ::ng-deep .mat-mdc-form-field.mat-focused .mdc-notched-outline__notch,
+    .search-field ::ng-deep .mat-mdc-form-field.mat-focused .mdc-notched-outline__trailing {
+      border-color: var(--signal) !important;
+      border-width: 2px;
+    }
     .table-container {
       position: relative;
       background: white;
@@ -179,6 +219,28 @@ import { ClienteDetalleComponent } from './cliente-detalle/cliente-detalle.compo
     }
     .fw-500 {
       font-weight: 500;
+    }
+    .badge-historial {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-left: 8px;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      vertical-align: middle;
+      background: #dcfce7;
+      color: #15803d;
+    }
+    .badge-historial.excelente {
+      background: #fef9c3;
+      color: #a16207;
+    }
+    .badge-historial mat-icon {
+      font-size: 14px;
+      width: 14px;
+      height: 14px;
     }
     .actions-col {
       width: 160px;

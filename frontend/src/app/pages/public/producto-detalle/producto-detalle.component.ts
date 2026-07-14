@@ -43,9 +43,11 @@ import { CarritoService } from '../../../services/carrito.service';
 
           <!-- Info y Actions -->
           <div class="product-info">
-            <div class="breadcrumb">
-              <span class="cat-link" (click)="irCategoria()">{{ producto().categoria_nombre }}</span>
-            </div>
+            @if (producto()?.categoria_nombre) {
+              <div class="breadcrumb">
+                <span class="cat-link" (click)="irCategoria()">{{ producto()?.categoria_nombre }}</span>
+              </div>
+            }
             
             <h1 class="product-title">{{ producto().nombre }}</h1>
             
@@ -211,7 +213,7 @@ export class ProductoDetalleComponent implements OnInit {
       next: (res) => {
         const prod = res.data;
         this.producto.set(prod);
-        this.imagenSeleccionada.set(prod.imagenes?.[0] || 'assets/placeholder.jpg');
+        this.imagenSeleccionada.set(prod.imagenes?.[0] || 'assets/producto-ejemplo.jpeg');
         
         // SSR / SEO CRÍTICO: Inyectar meta tags para que google indexe este producto.
         this.seo.setSeoData(
@@ -230,7 +232,9 @@ export class ProductoDetalleComponent implements OnInit {
   }
 
   irCategoria() {
-    this.router.navigate(['/productos'], { queryParams: { categoria: this.producto().categoria_nombre.toLowerCase() } });
+    const categoria = this.producto()?.categoria_nombre;
+    if (!categoria) return;
+    this.router.navigate(['/productos'], { queryParams: { categoria: categoria.toLowerCase() } });
   }
 
   agregarCarrito() {

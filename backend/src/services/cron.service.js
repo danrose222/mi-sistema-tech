@@ -4,6 +4,7 @@
 
 const cron = require('node-cron');
 const creditosService = require('./creditos.service');
+const notificacionesService = require('./notificaciones.service');
 
 /**
  * Inicializa todos los cron jobs del sistema.
@@ -33,7 +34,26 @@ function iniciarCrons(pool) {
     console.log('------------------------------------------------------------\n');
   });
 
-  // Aquí podrías agregar más crons en el futuro (e.g., recordatorios de pago)
+  // =========================================================================
+  // 2. Enviar recordatorios de WhatsApp de cuotas por vencer y vencidas
+  // Se ejecuta todos los días a las 09:00 hs (después de que el cron anterior
+  // ya marcó como "vencida" lo que corresponda).
+  // =========================================================================
+  cron.schedule('0 9 * * *', async () => {
+    console.log('\n------------------------------------------------------------');
+    console.log(`[CronService - ${new Date().toISOString()}] Ejecutando tarea: enviarRecordatoriosDeCuotas`);
+
+    try {
+      const resultado = await notificacionesService.enviarRecordatoriosDeCuotas(pool);
+      console.log(`[CronService] Tarea completada exitosamente.`);
+      console.log(`[CronService] Resumen -> Candidatas: ${resultado.total}, Enviados: ${resultado.enviados}, Fallidos: ${resultado.fallidos}, Omitidos (sin teléfono): ${resultado.omitidos}`);
+    } catch (error) {
+      // Igual que arriba: atrapamos el error para no tirar abajo el proceso ni
+      // los demás crons si falla la DB o la API de WhatsApp.
+      console.error('[CronService] Error catastrófico al ejecutar enviarRecordatoriosDeCuotas:', error.message);
+    }
+    console.log('------------------------------------------------------------\n');
+  });
 
   console.log('[CronService] Cron jobs inicializados correctamente.');
 }

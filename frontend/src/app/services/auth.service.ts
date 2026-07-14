@@ -35,13 +35,23 @@ export class AuthService {
    * Carga la sesión desde localStorage al iniciar el servicio
    */
   private loadStateFromStorage(): void {
-    if (isPlatformBrowser(this.platformId)) {
-      const storedToken = localStorage.getItem('token');
-      const storedUser = localStorage.getItem('usuario');
-      if (storedToken && storedUser) {
-        this.token.set(storedToken);
-        this.currentUser.set(JSON.parse(storedUser));
-      }
+    if (!isPlatformBrowser(this.platformId)) return;
+
+    const storedToken = localStorage.getItem('token');
+    const storedUser = localStorage.getItem('usuario');
+
+    if (!storedToken || !storedUser) return;
+
+    try {
+      const usuario = JSON.parse(storedUser) as User;
+      this.token.set(storedToken);
+      this.currentUser.set(usuario);
+    } catch (err) {
+      console.error('Sesión inválida en localStorage, se limpia:', err);
+      localStorage.removeItem('usuario');
+      localStorage.removeItem('token');
+      this.token.set(null);
+      this.currentUser.set(null);
     }
   }
 

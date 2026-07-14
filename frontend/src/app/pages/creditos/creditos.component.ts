@@ -4,7 +4,6 @@ import { ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { MatTableModule } from '@angular/material/table';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
-import { MatTabsModule } from '@angular/material/tabs';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -24,7 +23,6 @@ import { CreditosService, Credito } from '../../services/creditos.service';
     ReactiveFormsModule,
     MatTableModule,
     MatPaginatorModule,
-    MatTabsModule,
     MatButtonModule,
     MatIconModule,
     MatInputModule,
@@ -43,13 +41,18 @@ import { CreditosService, Credito } from '../../services/creditos.service';
         </button>
       </div>
 
-      <div class="tabs-and-filters">
-        <mat-tab-group (selectedTabChange)="onTabChange($event)" class="tabs-group">
-          <mat-tab label="Todos"></mat-tab>
-          <mat-tab label="Activos"></mat-tab>
-          <mat-tab label="Morosos"></mat-tab>
-          <mat-tab label="Liquidados"></mat-tab>
-        </mat-tab-group>
+      <div class="status-filters">
+        @for (opcion of filtrosEstado; track opcion.valor) {
+          <button
+            type="button"
+            class="filter-pill"
+            [ngClass]="'pill-' + opcion.valor"
+            [class.active]="filtroEstado() === opcion.valor"
+            (click)="setFiltro(opcion.valor)">
+            <mat-icon>{{ opcion.icono }}</mat-icon>
+            {{ opcion.label }}
+          </button>
+        }
       </div>
 
       <div class="table-container mat-elevation-z2">
@@ -95,6 +98,9 @@ import { CreditosService, Credito } from '../../services/creditos.service';
                 <mat-icon [matBadge]="element.estado === 'moroso' ? '!' : ''" matBadgeColor="warn" [matBadgeHidden]="element.estado !== 'moroso'">
                   visibility
                 </mat-icon>
+              </button>
+              <button mat-icon-button color="warn" (click)="eliminar(element)" matTooltip="Eliminar crédito">
+                <mat-icon>delete</mat-icon>
               </button>
             </td>
           </ng-container>
@@ -142,11 +148,68 @@ import { CreditosService, Credito } from '../../services/creditos.service';
       color: #1e293b;
       font-weight: 600;
     }
-    .tabs-and-filters {
+    .status-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
       background: white;
       border-radius: 8px;
-      padding: 0 8px;
+      padding: 14px 16px;
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .filter-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      border: 2px solid transparent;
+      border-radius: 999px;
+      padding: 8px 18px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      background: #f1f5f9;
+      color: #64748b;
+      transition: transform 0.12s ease, box-shadow 0.12s ease, background-color 0.12s ease;
+    }
+    .filter-pill mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+    .filter-pill:hover {
+      transform: translateY(-1px);
+    }
+
+    /* Todos: neutro */
+    .pill-todos.active {
+      background: #e2e8f0;
+      color: #334155;
+      border-color: #94a3b8;
+    }
+
+    /* Activos: transmite normalidad */
+    .pill-activo.active {
+      background: #dbeafe;
+      color: #1d4ed8;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    }
+
+    /* Liquidados: éxito */
+    .pill-liquidado.active {
+      background: #dcfce7;
+      color: #15803d;
+      border-color: #22c55e;
+      box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.15);
+    }
+
+    /* Morosos: debe destacar fuertemente */
+    .pill-moroso.active {
+      background: #fee2e2;
+      color: #b91c1c;
+      border-color: #ef4444;
+      box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
     }
     .table-container {
       position: relative;
@@ -203,6 +266,13 @@ export class CreditosComponent implements OnInit {
   
   filtroEstado = signal<string>('todos');
 
+  filtrosEstado = [
+    { valor: 'todos', label: 'Todos', icono: 'apps' },
+    { valor: 'activo', label: 'Activos', icono: 'check_circle' },
+    { valor: 'moroso', label: 'Morosos', icono: 'warning' },
+    { valor: 'liquidado', label: 'Liquidados', icono: 'task_alt' }
+  ];
+
   ngOnInit() {
     this.cargarDatos();
   }
@@ -224,9 +294,9 @@ export class CreditosComponent implements OnInit {
     });
   }
 
-  onTabChange(event: any) {
-    const estados = ['todos', 'activo', 'moroso', 'liquidado'];
-    this.filtroEstado.set(estados[event.index]);
+  setFiltro(estado: string) {
+    if (this.filtroEstado() === estado) return;
+    this.filtroEstado.set(estado);
     this.pageIndex.set(0);
     this.cargarDatos();
   }
@@ -243,5 +313,28 @@ export class CreditosComponent implements OnInit {
 
   verDetalle(id: number) {
     this.router.navigate(['/admin/creditos', id]);
+  }
+
+  eliminar(credito: Credito) {
+    const confirmado = confirm(
+      `¿Estás seguro? Esto borrará el crédito de ${credito.cliente_nombre || 'este cliente'} y todas sus cuotas. Esta acción no se puede deshacer.`
+    );
+    if (!confirmado) return;
+
+    this.isLoading.set(true);
+    this.creditosService.eliminar(credito.id).subscribe({
+      next: () => {
+        this.snackBar.open('Crédito eliminado exitosamente', 'Cerrar', { duration: 3000 });
+        if (this.creditos().length === 1 && this.pageIndex() > 0) {
+          this.pageIndex.set(this.pageIndex() - 1);
+        }
+        this.cargarDatos();
+      },
+      error: (err) => {
+        console.error(err);
+        this.snackBar.open(err.error?.error || 'Error al eliminar el crédito', 'Cerrar', { duration: 5000 });
+        this.isLoading.set(false);
+      }
+    });
   }
 }

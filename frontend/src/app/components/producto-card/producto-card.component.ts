@@ -1,4 +1,4 @@
-import { Component, Input, inject } from '@angular/core';
+import { Component, Input, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
@@ -20,9 +20,32 @@ import { CarritoService } from '../../services/carrito.service';
         <span class="product-price">{{ producto.precio | currency:'ARS':'symbol':'1.0-0' }}</span>
       </div>
       <div class="product-footer">
-        <button class="btn-primary product-btn" (click)="agregarAlCarrito()">
+        <div class="qty-selector">
+          <button
+            type="button"
+            class="qty-btn"
+            (click)="decrementar()"
+            [disabled]="cantidad() <= 1"
+            aria-label="Restar unidad">
+            <mat-icon>remove</mat-icon>
+          </button>
+          <span class="qty-value">{{ cantidad() }}</span>
+          <button
+            type="button"
+            class="qty-btn"
+            (click)="incrementar()"
+            [disabled]="alcanzoStockMaximo()"
+            aria-label="Sumar unidad">
+            <mat-icon>add</mat-icon>
+          </button>
+        </div>
+
+        <button
+          class="btn-primary product-btn"
+          (click)="agregarAlCarrito()"
+          [disabled]="sinStock()">
           <mat-icon>add_shopping_cart</mat-icon>
-          Agregar
+          {{ sinStock() ? 'Sin stock' : 'Agregar' }}
         </button>
       </div>
     </div>
@@ -82,7 +105,45 @@ import { CarritoService } from '../../services/carrito.service';
     }
     .product-footer {
       padding: 16px 20px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
     }
+
+    /* Selector de cantidad */
+    .qty-selector {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      border: 1px solid var(--border-dim);
+      border-radius: var(--radius-sm);
+      padding: 4px;
+    }
+    .qty-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border: none;
+      border-radius: var(--radius-sm);
+      background: transparent;
+      color: var(--white);
+      cursor: pointer;
+      transition: background-color 0.15s;
+    }
+    .qty-btn:hover:not(:disabled) { background: rgba(255, 255, 255, 0.08); }
+    .qty-btn:disabled { color: var(--ash); cursor: not-allowed; opacity: 0.4; }
+    .qty-btn mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    .qty-value {
+      min-width: 32px;
+      text-align: center;
+      font-weight: 600;
+      color: var(--white);
+      font-family: var(--font-display);
+    }
+
     .product-btn {
       width: 100%;
       padding: 10px 16px;
@@ -101,10 +162,40 @@ export class ProductoCardComponent {
   private carritoService = inject(CarritoService);
   private snackBar = inject(MatSnackBar);
 
+  // Cantidad elegida por el usuario antes de mandarla al carrito (mínimo 1).
+  cantidad = signal(1);
+
+  private stockDisponible(): number | undefined {
+    return this.producto?.stock;
+  }
+
+  sinStock(): boolean {
+    const stock = this.stockDisponible();
+    return stock !== undefined && stock <= 0;
+  }
+
+  alcanzoStockMaximo(): boolean {
+    const stock = this.stockDisponible();
+    return stock !== undefined && this.cantidad() >= stock;
+  }
+
+  incrementar() {
+    if (this.alcanzoStockMaximo()) return;
+    this.cantidad.update(c => c + 1);
+  }
+
+  decrementar() {
+    if (this.cantidad() <= 1) return;
+    this.cantidad.update(c => c - 1);
+  }
+
   agregarAlCarrito() {
-    this.carritoService.agregar(this.producto, 1);
-    this.snackBar.open(`${this.producto.nombre} agregado al carrito`, 'Ver Carrito', {
+    if (this.sinStock()) return;
+
+    this.carritoService.agregar(this.producto, this.cantidad());
+    this.snackBar.open(`${this.cantidad()} × ${this.producto.nombre} agregado al carrito`, 'Ver Carrito', {
       duration: 3000
     });
+    this.cantidad.set(1);
   }
 }

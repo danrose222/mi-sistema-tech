@@ -52,20 +52,30 @@ export class CarritoService {
   }
 
   agregar(producto: any, cantidad: number = 1) {
+    // `stock` es opcional: si el producto no la trae, no se aplica tope.
+    const stockDisponible: number | undefined = producto.stock;
+
     this.items.update(current => {
       const existing = current.find(item => item.id === producto.id);
       let newItems;
       if (existing) {
-        newItems = current.map(item => 
-          item.id === producto.id ? { ...item, cantidad: item.cantidad + cantidad } : item
+        const cantidadDeseada = existing.cantidad + cantidad;
+        const cantidadFinal = stockDisponible !== undefined
+          ? Math.min(cantidadDeseada, stockDisponible)
+          : cantidadDeseada;
+        newItems = current.map(item =>
+          item.id === producto.id ? { ...item, cantidad: cantidadFinal } : item
         );
       } else {
+        const cantidadFinal = stockDisponible !== undefined
+          ? Math.min(cantidad, stockDisponible)
+          : cantidad;
         newItems = [...current, {
           id: producto.id,
           nombre: producto.nombre,
           precio: producto.precio,
-          cantidad,
-          imagen: producto.imagenes?.[0] || 'assets/no-image.png',
+          cantidad: cantidadFinal,
+          imagen: producto.imagenes?.[0] || 'assets/producto-ejemplo.jpeg',
           slug: producto.slug
         }];
       }

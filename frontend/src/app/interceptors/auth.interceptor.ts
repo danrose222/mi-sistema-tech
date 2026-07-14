@@ -1,25 +1,29 @@
-import { HttpInterceptorFn } from '@angular/common/http';
+import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
+import { Router } from '@angular/router';
+import { catchError, throwError } from 'rxjs';
 import { AuthService } from '../services/auth.service';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const authService = inject(AuthService);
+  const router = inject(Router);
   const token = authService.getToken();
+  const esLogin = req.url.includes('/api/auth/login');
 
   // No inyectamos el token en las peticiones al endpoint de login
-  if (req.url.includes('/api/auth/login')) {
-    return next(req);
-  }
+  const authReq = (!esLogin && token)
+    ? req.clone({ setHeaders: { Authorization: `Bearer ${token}` } })
+    : req;
 
-  // Clonamos el request e inyectamos el Header 'Authorization'
-  if (token) {
-    const authReq = req.clone({
-      setHeaders: {
-        Authorization: `Bearer ${token}`
+  return next(authReq).pipe(
+    catchError((error: unknown) => {
+      // Un 401 en el login es "credenciales inválidas", no una sesión expirada:
+      // no debe disparar el logout/redirect, sino dejar que el componente lo maneje.
+      if (error instanceof HttpErrorResponse && error.status === 401 && !esLogin) {
+        authService.logout();
+        router.navigate(['/login']);
       }
-    });
-    return next(authReq);
-  }
-
-  return next(req);
+      return throwError(() => error);
+    })
+  );
 };

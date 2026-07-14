@@ -37,7 +37,7 @@ function addDays(date, days) {
  * @returns {Promise<Object>} Crédito creado con sus cuotas.
  */
 async function crearCredito(pool, data) {
-  const { clienteId, pedidoId, montoTotal, cantidadCuotas, frecuencia, fechaPrimeraCuota, usuarioId } = data;
+  const { clienteId, pedidoId, productoId, montoTotal, cantidadCuotas, frecuencia, fechaPrimeraCuota, usuarioId } = data;
 
   // Validaciones básicas
   if (!clienteId) throw new Error('El clienteId es requerido');
@@ -46,13 +46,18 @@ async function crearCredito(pool, data) {
   if (!['semanal', 'mensual'].includes(frecuencia)) throw new Error('Frecuencia inválida (semanal o mensual)');
   if (!fechaPrimeraCuota) throw new Error('La fecha de la primera cuota es requerida');
 
-  // a) y b) Validar existencia de cliente (y pedido si aplica)
+  // a) y b) Validar existencia de cliente (y pedido/producto si aplica)
   const [clientes] = await pool.execute('SELECT id FROM clientes WHERE id = ?', [clienteId]);
   if (clientes.length === 0) throw new Error('El cliente especificado no existe');
 
   if (pedidoId) {
     const [pedidos] = await pool.execute('SELECT id FROM pedidos WHERE id = ?', [pedidoId]);
     if (pedidos.length === 0) throw new Error('El pedido especificado no existe');
+  }
+
+  if (productoId) {
+    const [productos] = await pool.execute('SELECT id FROM productos WHERE id = ?', [productoId]);
+    if (productos.length === 0) throw new Error('El producto especificado no existe');
   }
 
   // c) Calcular monto cuota y redondeos
@@ -75,6 +80,7 @@ async function crearCredito(pool, data) {
     const nuevoCredito = await creditosRepo.crear(connection, {
       cliente_id: clienteId,
       pedido_id: pedidoId || null,
+      producto_id: productoId || null,
       monto_total: montoTotalNumber,
       cantidad_cuotas: cantidadCuotas,
       frecuencia,
@@ -218,6 +224,7 @@ async function pagarCuota(pool, cuotaId, monto, pagoId = null, usuarioId = null)
     );
 
     let creditoLiquidado = false;
+    let historialActualizado = null;
     if (pendientes[0].count === 0) {
       // Liquidar crédito
       await connection.execute(
@@ -226,15 +233,91 @@ async function pagarCuota(pool, cuotaId, monto, pagoId = null, usuarioId = null)
       );
       creditoLiquidado = true;
       console.log(`[CreditosService] Crédito #${cuota.credito_id} ha sido liquidado en su totalidad.`);
+
+      // Al liquidar un crédito, mejoramos el historial crediticio del cliente:
+      // "Normal" -> "Bueno" en la primera liquidación, "Bueno" -> "Excelente" en
+      // las siguientes. Nunca degradamos un historial ya alcanzado.
+      const [clienteRows] = await connection.execute(
+        'SELECT historial_crediticio FROM clientes WHERE id = ? FOR UPDATE',
+        [cuota.cliente_id]
+      );
+      const historialActual = clienteRows[0]?.historial_crediticio || 'Normal';
+      historialActualizado = historialActual === 'Normal' ? 'Bueno' : 'Excelente';
+
+      await connection.execute(
+        'UPDATE clientes SET historial_crediticio = ? WHERE id = ?',
+        [historialActualizado, cuota.cliente_id]
+      );
+      console.log(`[CreditosService] Historial crediticio del cliente #${cuota.cliente_id} actualizado a "${historialActualizado}".`);
     }
 
     await connection.commit();
-    return { success: true, estadoCuota: nuevoEstado, creditoLiquidado };
+    return { success: true, estadoCuota: nuevoEstado, creditoLiquidado, historialActualizado };
 
   } catch (error) {
     await connection.rollback();
     console.error('[CreditosService] Error al pagar cuota:', error);
     throw error; // Relanzamos el error original para que el controlador lo maneje
+  } finally {
+    connection.release();
+  }
+}
+
+/**
+ * Elimina un crédito y todas sus cuotas dentro de una transacción.
+ * Solo se permite si el crédito todavía no registra ningún pago (para no
+ * corromper el historial de cuenta corriente ni el dinero ya cobrado); si ya
+ * tiene pagos, debe anularse cambiando su estado en vez de borrarse.
+ * @param {Object} pool - Pool de conexiones.
+ * @param {number} creditoId - ID del crédito a eliminar.
+ * @returns {Promise<Object>} Confirmación de la eliminación.
+ */
+async function eliminarCredito(pool, creditoId) {
+  if (!creditoId) throw new Error('El ID del crédito es requerido');
+
+  const connection = await pool.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    // a) Bloquear y validar existencia del crédito
+    const [creditos] = await connection.execute('SELECT id FROM creditos WHERE id = ? FOR UPDATE', [creditoId]);
+    if (creditos.length === 0) throw new Error('El crédito especificado no existe');
+
+    // b) Bloquear el borrado si ya se registró algún pago real sobre sus cuotas
+    const [pagosRows] = await connection.execute(
+      'SELECT COALESCE(SUM(monto_pagado), 0) AS totalPagado FROM cuotas WHERE credito_id = ? FOR UPDATE',
+      [creditoId]
+    );
+    const totalPagado = parseFloat(pagosRows[0].totalPagado);
+    if (totalPagado > 0) {
+      throw new Error('No se permite eliminar un crédito que ya registra pagos. Cambie su estado a "cancelado" en su lugar.');
+    }
+
+    console.log(`[CreditosService] Eliminando crédito #${creditoId} (sin pagos registrados)`);
+
+    // c) Eliminar primero las cuotas (hijas)
+    await connection.execute('DELETE FROM cuotas WHERE credito_id = ?', [creditoId]);
+
+    // d) Revertir el movimiento de cuenta corriente que se generó al otorgar
+    // el crédito, para que el saldo del cliente no quede con una "venta" fantasma
+    await connection.execute(
+      "DELETE FROM cuentas_corrientes WHERE referencia_tipo = 'credito' AND referencia_id = ?",
+      [creditoId]
+    );
+
+    // e) Finalmente eliminar el crédito (padre)
+    await connection.execute('DELETE FROM creditos WHERE id = ?', [creditoId]);
+
+    await connection.commit();
+    console.log(`[CreditosService] Crédito #${creditoId} eliminado exitosamente junto con sus cuotas.`);
+
+    return { id: Number(creditoId), eliminado: true };
+
+  } catch (error) {
+    await connection.rollback();
+    console.error('[CreditosService] Error al eliminar crédito, haciendo rollback:', error);
+    throw error;
   } finally {
     connection.release();
   }
@@ -351,6 +434,7 @@ async function marcarCuotasVencidas(pool) {
 
 exports.crearCredito = crearCredito;
 exports.pagarCuota = pagarCuota;
+exports.eliminarCredito = eliminarCredito;
 exports.obtenerDetalleCredito = obtenerDetalleCredito;
 exports.listarCreditos = listarCreditos;
 exports.marcarCuotasVencidas = marcarCuotasVencidas;

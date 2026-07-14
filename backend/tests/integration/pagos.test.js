@@ -1,6 +1,16 @@
 const request = require('supertest');
+const crypto = require('crypto');
 const app = require('../../src/app');
 const pool = require('../../src/config/database');
+
+// Genera una firma x-signature válida siguiendo el algoritmo real de MercadoPago
+// (HMAC-SHA256 sobre "id:{dataId};ts:{ts};" con el secreto configurado en MP_WEBHOOK_SECRET).
+function generarFirmaWebhook(dataId) {
+  const ts = Date.now();
+  const manifest = `id:${dataId};ts:${ts};`;
+  const hash = crypto.createHmac('sha256', process.env.MP_WEBHOOK_SECRET).update(manifest).digest('hex');
+  return `ts=${ts},v1=${hash}`;
+}
 
 // Mockear mercadopagoService
 jest.mock('../../src/services/mercadopagoService', () => {
@@ -52,6 +62,7 @@ describe('Módulo de Pagos (Webhook) Integración', () => {
             const res = await request(app)
                 .post('/api/pedidos/webhook')
                 .set('x-mercadopago-topic', 'payment')
+                .set('x-signature', generarFirmaWebhook('pay_999'))
                 .send(data);
 
             expect(res.statusCode).toBe(200);
@@ -95,6 +106,7 @@ describe('Módulo de Pagos (Webhook) Integración', () => {
             const res1 = await request(app)
                 .post('/api/pedidos/webhook')
                 .set('x-mercadopago-topic', 'payment')
+                .set('x-signature', generarFirmaWebhook('pay_999'))
                 .send(data);
 
             expect(res1.statusCode).toBe(200);
@@ -103,6 +115,7 @@ describe('Módulo de Pagos (Webhook) Integración', () => {
             const res2 = await request(app)
                 .post('/api/pedidos/webhook')
                 .set('x-mercadopago-topic', 'payment')
+                .set('x-signature', generarFirmaWebhook('pay_999'))
                 .send(data);
 
             expect(res2.statusCode).toBe(200);

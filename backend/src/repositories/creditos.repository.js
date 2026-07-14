@@ -11,12 +11,13 @@
 async function crear(db, creditoData) {
   try {
     const query = `
-      INSERT INTO creditos (cliente_id, pedido_id, monto_total, cantidad_cuotas, frecuencia, monto_cuota, fecha_primera_cuota, estado, notas)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO creditos (cliente_id, pedido_id, producto_id, monto_total, cantidad_cuotas, frecuencia, monto_cuota, fecha_primera_cuota, estado, notas)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
     const params = [
       creditoData.cliente_id,
       creditoData.pedido_id || null,
+      creditoData.producto_id || null,
       creditoData.monto_total,
       creditoData.cantidad_cuotas,
       creditoData.frecuencia,
@@ -25,7 +26,7 @@ async function crear(db, creditoData) {
       creditoData.estado || 'activo',
       creditoData.notas || null
     ];
-    
+
     const [result] = await db.execute(query, params);
     return { id: result.insertId, ...creditoData };
   } catch (error) {
@@ -42,9 +43,12 @@ async function crear(db, creditoData) {
 async function buscarPorId(db, id) {
   try {
     const query = `
-      SELECT cr.*, c.nombre AS cliente_nombre, c.email AS cliente_email
+      SELECT cr.*,
+        c.nombre AS cliente_nombre, c.email AS cliente_email, c.telefono AS cliente_telefono,
+        p.nombre AS producto_nombre, p.sku AS producto_sku, p.precio AS producto_precio
       FROM creditos cr
       JOIN clientes c ON cr.cliente_id = c.id
+      LEFT JOIN productos p ON cr.producto_id = p.id
       WHERE cr.id = ?
     `;
     const [rows] = await db.execute(query, [id]);
@@ -67,9 +71,10 @@ async function buscarPorId(db, id) {
 async function listar(db, { estado, clienteId, pagina = 1, porPagina = 10 }) {
   try {
     let query = `
-      SELECT SQL_CALC_FOUND_ROWS cr.*, c.nombre AS cliente_nombre 
+      SELECT SQL_CALC_FOUND_ROWS cr.*, c.nombre AS cliente_nombre, p.nombre AS producto_nombre
       FROM creditos cr
       JOIN clientes c ON cr.cliente_id = c.id
+      LEFT JOIN productos p ON cr.producto_id = p.id
       WHERE 1=1
     `;
     const params = [];

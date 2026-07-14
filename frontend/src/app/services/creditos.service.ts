@@ -12,13 +12,25 @@ export interface Cuota {
   estado: string;
   fecha_pago: string | null;
   pago_id: number | null;
+  ultimo_recordatorio?: string | null;
+}
+
+export interface ResumenCredito {
+  totalPagado: number;
+  totalPendiente: number;
+  proximaCuota: Cuota | null;
 }
 
 export interface Credito {
   id: number;
   cliente_id: number;
   cliente_nombre?: string;
+  cliente_telefono?: string;
   pedido_id: number | null;
+  producto_id: number | null;
+  producto_nombre?: string;
+  producto_sku?: string;
+  producto_precio?: number;
   monto_total: number;
   cantidad_cuotas: number;
   frecuencia: string;
@@ -28,6 +40,7 @@ export interface Credito {
   notas: string;
   created_at: string;
   cuotas?: Cuota[];
+  resumen?: ResumenCredito;
 }
 
 export interface CreditosResponse {
@@ -70,7 +83,17 @@ export class CreditosService {
     return this.http.post(`${this.apiUrl}/${creditoId}/cuotas/${cuotaId}/pagar`, { monto });
   }
 
+  eliminar(id: number): Observable<{ success: boolean; data: { id: number; eliminado: boolean } }> {
+    return this.http.delete<{ success: boolean; data: { id: number; eliminado: boolean } }>(`${this.apiUrl}/${id}`);
+  }
+
   obtenerVencidas(): Observable<any> {
     return this.http.get(`/api/cuotas/vencidas`);
+  }
+
+  enviarRecordatorio(cuotaId: number): Observable<{ success: boolean; data: { cuotaId: number; telefono: string; mensaje: string } }> {
+    return this.http.post<{ success: boolean; data: { cuotaId: number; telefono: string; mensaje: string } }>(
+      `/api/cuotas/${cuotaId}/recordatorio`, {}
+    );
   }
 }

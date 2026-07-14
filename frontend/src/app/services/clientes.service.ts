@@ -9,6 +9,7 @@ export interface Cliente {
   email: string;
   direccion: string;
   notas: string;
+  historial_crediticio: string;
   created_at: string;
 }
 

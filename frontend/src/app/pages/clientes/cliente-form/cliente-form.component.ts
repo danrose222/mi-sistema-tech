@@ -42,7 +42,9 @@ import { ClientesService } from '../../../services/clientes.service';
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Teléfono</mat-label>
           <input matInput formControlName="telefono" placeholder="Ej. +54 9 11 1234-5678">
-          @if (form.get('telefono')?.hasError('pattern')) {
+          @if (form.get('telefono')?.hasError('required')) {
+            <mat-error>El teléfono es requerido (se usa para los recordatorios por WhatsApp)</mat-error>
+          } @else if (form.get('telefono')?.hasError('pattern')) {
             <mat-error>Formato inválido (Ej: +54 9 11 1234-5678)</mat-error>
           }
         </mat-form-field>
@@ -94,7 +96,7 @@ export class ClienteFormComponent {
   form: FormGroup = this.fb.group({
     nombre: [this.data?.cliente?.nombre || '', Validators.required],
     email: [this.data?.cliente?.email || '', [Validators.email]],
-    telefono: [this.data?.cliente?.telefono || '', [Validators.pattern(this.phonePattern)]],
+    telefono: [this.data?.cliente?.telefono || '', [Validators.required, Validators.pattern(this.phonePattern)]],
     direccion: [this.data?.cliente?.direccion || ''],
     notas: [this.data?.cliente?.notas || '']
   });

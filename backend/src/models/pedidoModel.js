@@ -54,6 +54,28 @@ exports.listarPedidos = async () => {
   return rows;
 };
 
+exports.listarPedidosPaginado = async ({ page = 1, limit = 20, estado = '' }) => {
+  const offset = (page - 1) * limit;
+  const where = estado ? 'WHERE p.estado = ?' : '';
+  const whereParams = estado ? [estado] : [];
+
+  const [rows] = await pool.query(
+    `SELECT p.id, p.cliente_id, c.nombre AS cliente_nombre, c.telefono AS cliente_telefono, p.total, p.estado, p.pago_link, p.mercado_pago_preference_id, p.created_at
+     FROM pedidos p
+     LEFT JOIN clientes c ON c.id = p.cliente_id
+     ${where}
+     ORDER BY p.created_at DESC
+     LIMIT ? OFFSET ?`,
+    [...whereParams, limit, offset]
+  );
+  const [countRows] = await pool.query(
+    `SELECT COUNT(*) AS total FROM pedidos p ${where}`,
+    whereParams
+  );
+
+  return { data: rows, total: countRows[0].total };
+};
+
 exports.actualizarPedidoEstado = async (id, estado) => {
   await pool.query('UPDATE pedidos SET estado = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [estado, id]);
 };

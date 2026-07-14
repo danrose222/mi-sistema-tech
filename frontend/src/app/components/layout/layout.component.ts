@@ -10,7 +10,7 @@ import { AuthService } from '../../services/auth.service';
     <div class="admin-shell">
       <aside class="sidebar">
         <div class="sidebar-brand">
-          <h1 class="logo-mark" style="font-size: 1.3rem;">CEL<span class="dot">·</span>SHOP</h1>
+          <img src="assets/logo.jpeg" alt="Cel Shop Center" class="logo-img" style="height: 36px;" routerLink="/admin/dashboard">
         </div>
         <nav class="sidebar-nav">
           <a routerLink="/admin/dashboard" routerLinkActive="active" class="nav-item">
@@ -24,6 +24,9 @@ import { AuthService } from '../../services/auth.service';
           </a>
           <a routerLink="/admin/pedidos" routerLinkActive="active" class="nav-item">
             <span class="nav-label">Pedidos</span>
+          </a>
+          <a routerLink="/admin/stock" routerLinkActive="active" class="nav-item">
+            <span class="nav-label">Stock</span>
           </a>
           <a routerLink="/admin/creditos" routerLinkActive="active" class="nav-item">
             <span class="nav-label">Créditos</span>
@@ -90,7 +93,7 @@ import { AuthService } from '../../services/auth.service';
     }
     .nav-item.active {
       color: var(--signal);
-      background-color: rgba(59, 130, 246, 0.1);
+      background-color: rgba(0, 174, 239, 0.1);
       font-weight: 600;
     }
 
@@ -122,7 +125,7 @@ import { AuthService } from '../../services/auth.service';
       font-size: 0.95rem;
     }
     .role {
-      background-color: rgba(59, 130, 246, 0.1);
+      background-color: rgba(0, 174, 239, 0.1);
       color: var(--pulse);
       border: 1px solid var(--border-dim);
       padding: 4px 10px;

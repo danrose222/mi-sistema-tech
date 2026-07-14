@@ -27,7 +27,7 @@ import { CarritoService } from '../../services/carrito.service';
       <!-- NAVBAR -->
       <header class="navbar">
         <div class="navbar-inner">
-          <h1 class="logo-mark" routerLink="/">CEL<span class="dot">·</span>SHOP</h1>
+          <img src="assets/logo.jpeg" alt="Cel Shop Center" class="logo-img" routerLink="/">
 
           <div class="search-wrapper hidden-mobile">
             <mat-icon class="search-icon">search</mat-icon>
@@ -63,7 +63,7 @@ import { CarritoService } from '../../services/carrito.service';
       <footer class="footer">
         <div class="footer-inner">
           <div class="footer-col">
-            <h4 class="logo-mark" style="font-size: 1.2rem;">CEL<span class="dot">·</span>SHOP</h4>
+            <img src="assets/logo.jpeg" alt="Cel Shop Center" class="logo-img" style="height: 32px; margin-bottom: 12px;">
             <p>Tu tienda de tecnología de confianza en Argentina.</p>
           </div>
           <div class="footer-col">
@@ -88,10 +88,24 @@ import { CarritoService } from '../../services/carrito.service';
   `,
   styles: [`
     .shell {
+      position: relative;
       display: flex;
       flex-direction: column;
       min-height: 100vh;
       background-color: var(--void);
+    }
+    /* Marca de agua del logo detrás de todo el storefront: sutil, no compite con el contenido */
+    .shell::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      background-image: url('/assets/logo.jpeg');
+      background-size: 900px;
+      background-position: center 15%;
+      background-repeat: no-repeat;
+      opacity: 0.035;
+      pointer-events: none;
     }
 
     /* ── Navbar ─────────────────────────── */

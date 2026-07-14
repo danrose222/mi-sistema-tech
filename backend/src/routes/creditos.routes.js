@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { body, param, query, validationResult } = require('express-validator');
-const { crearCredito, listarCreditos, obtenerDetalleCredito, pagarCuota } = require('../services/creditos.service');
+const { crearCredito, listarCreditos, obtenerDetalleCredito, pagarCuota, eliminarCredito } = require('../services/creditos.service');
 const cuotasRepo = require('../repositories/cuotas.repository');
 const pool = require('../config/database');
 
@@ -34,7 +34,7 @@ const handleServiceError = (error, res) => {
   if (msg.includes('requerido') || msg.includes('inválid') || msg.includes('mayor a cero') || msg.includes('frecuencia')) {
     return res.status(400).json({ success: false, error: error.message });
   }
-  if (msg.includes('ya se encuentra') || msg.includes('no se permite pagar más')) {
+  if (msg.includes('ya se encuentra') || msg.includes('no se permite')) {
     return res.status(409).json({ success: false, error: error.message });
   }
   
@@ -53,6 +53,7 @@ router.post(
   [
     body('clienteId').isInt().withMessage('clienteId debe ser un número entero'),
     body('pedidoId').optional({ nullable: true }).isInt().withMessage('pedidoId debe ser un entero'),
+    body('productoId').optional({ nullable: true }).isInt().withMessage('productoId debe ser un entero'),
     body('montoTotal').isFloat({ gt: 0 }).withMessage('montoTotal debe ser un número mayor a 0'),
     body('cantidadCuotas').isInt({ min: 2, max: 48 }).withMessage('cantidadCuotas debe estar entre 2 y 48'),
     body('frecuencia').isIn(['semanal', 'mensual']).withMessage('frecuencia debe ser "semanal" o "mensual"'),
@@ -60,13 +61,19 @@ router.post(
       .isISO8601()
       .withMessage('fechaPrimeraCuota debe tener formato de fecha válido (YYYY-MM-DD)')
       .custom((value) => {
-        const fecha = new Date(value);
+        // `value` ya viene validado como fecha ISO (YYYY-MM-DD). Comparamos como
+        // strings en vez de construir un `Date`: `new Date('YYYY-MM-DD')` parsea
+        // en UTC, y al normalizar horas en huso horario negativo (ej. Argentina,
+        // UTC-3) el día se corría uno para atrás, rechazando la fecha de HOY como
+        // "en el pasado".
         const hoy = new Date();
-        // Reseteamos las horas para comparar solo el día
-        fecha.setHours(0, 0, 0, 0);
-        hoy.setHours(0, 0, 0, 0);
-        
-        if (fecha < hoy) {
+        const hoyStr = [
+          hoy.getFullYear(),
+          String(hoy.getMonth() + 1).padStart(2, '0'),
+          String(hoy.getDate()).padStart(2, '0')
+        ].join('-');
+
+        if (value < hoyStr) {
           throw new Error('La fecha de la primera cuota no puede ser en el pasado');
         }
         return true;
@@ -123,6 +130,26 @@ router.get(
     try {
       const detalle = await obtenerDetalleCredito(pool, req.params.id);
       return res.status(200).json({ success: true, data: detalle });
+    } catch (error) {
+      return handleServiceError(error, res);
+    }
+  }
+);
+
+// DELETE /api/creditos/:id (solo admin) — borra el crédito y sus cuotas en una transacción.
+// Se rechaza con 409 si el crédito ya tiene pagos registrados (ver creditos.service.js).
+router.delete(
+  '/:id',
+  authMiddleware,
+  adminOnly,
+  [
+    param('id').isInt().withMessage('El ID de crédito es inválido')
+  ],
+  validarPeticion,
+  async (req, res) => {
+    try {
+      const resultado = await eliminarCredito(pool, req.params.id);
+      return res.status(200).json({ success: true, data: resultado });
     } catch (error) {
       return handleServiceError(error, res);
     }

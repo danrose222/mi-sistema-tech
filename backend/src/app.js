@@ -66,6 +66,15 @@ app.use('/api/admin/usuarios', adminUserRoutes);
 const creditosRoutes = require('./routes/creditos.routes');
 app.use('/api/creditos', creditosRoutes);
 
+const cuotasRoutes = require('./routes/cuotas.routes');
+app.use('/api/cuotas', cuotasRoutes);
+
+const dashboardRoutes = require('./routes/dashboardRoutes');
+app.use('/api/dashboard', dashboardRoutes);
+
+const publicoRoutes = require('./routes/publicoRoutes');
+app.use('/api/publico', publicoRoutes);
+
 // Endpoint de Health Check
 app.get('/api/health', (req, res) => {
     res.status(200).json({ status: 'UP', timestamp: new Date() });

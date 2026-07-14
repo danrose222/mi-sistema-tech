@@ -42,7 +42,17 @@ async function crearMuchas(connection, cuotasArray) {
  */
 async function buscarPorCredito(db, creditoId) {
   try {
-    const query = `SELECT * FROM cuotas WHERE credito_id = ? ORDER BY numero ASC`;
+    // Alias `numero` -> `numero_cuota` y calculamos `saldo_pendiente` porque el
+    // frontend (credito-detalle.component.ts) espera esos nombres de campo.
+    const query = `
+      SELECT
+        id, credito_id, numero AS numero_cuota, monto, fecha_vencimiento, fecha_pago,
+        estado, monto_pagado, pago_id,
+        (monto - monto_pagado) AS saldo_pendiente
+      FROM cuotas
+      WHERE credito_id = ?
+      ORDER BY numero ASC
+    `;
     const [rows] = await db.execute(query, [creditoId]);
     return rows;
   } catch (error) {
@@ -136,11 +146,99 @@ async function actualizarEstado(db, id, estado) {
   }
 }
 
+/**
+ * Busca cuotas candidatas a recibir un recordatorio de WhatsApp: las que vencen
+ * hoy o mañana, y las vencidas que no recibieron un recordatorio en los últimos
+ * 3 días (o nunca). Incluye teléfono/nombre del cliente y nombre del producto
+ * vía JOIN para poder armar el mensaje sin consultas adicionales.
+ * @param {Object} db - Instancia de conexión o pool.
+ * @returns {Promise<Array>} Lista de cuotas con datos de cliente y producto.
+ */
+async function buscarParaRecordatorio(db) {
+  try {
+    const query = `
+      SELECT
+        cu.id, cu.numero, cu.monto, cu.fecha_vencimiento, cu.estado, cu.ultimo_recordatorio,
+        cr.id AS credito_id,
+        c.id AS cliente_id, c.nombre AS cliente_nombre, c.telefono AS cliente_telefono,
+        p.nombre AS producto_nombre,
+        IF(cu.estado = 'vencida', 'vencida', 'por_vencer') AS tipo
+      FROM cuotas cu
+      JOIN creditos cr ON cu.credito_id = cr.id
+      JOIN clientes c ON cr.cliente_id = c.id
+      LEFT JOIN productos p ON cr.producto_id = p.id
+      WHERE
+        (
+          cu.estado IN ('pendiente', 'parcial')
+          AND cu.fecha_vencimiento IN (CURDATE(), CURDATE() + INTERVAL 1 DAY)
+          AND (cu.ultimo_recordatorio IS NULL OR cu.ultimo_recordatorio < CURDATE())
+        )
+        OR
+        (
+          cu.estado = 'vencida'
+          AND (cu.ultimo_recordatorio IS NULL OR cu.ultimo_recordatorio <= NOW() - INTERVAL 3 DAY)
+        )
+      ORDER BY cu.fecha_vencimiento ASC
+    `;
+    const [rows] = await db.execute(query);
+    return rows;
+  } catch (error) {
+    throw new Error(`Error al buscar cuotas para recordatorio: ${error.message}`);
+  }
+}
+
+/**
+ * Busca una cuota puntual con los datos de cliente/producto necesarios para
+ * armar un recordatorio manual (sin las condiciones de anti-spam del cron).
+ * @param {Object} db - Instancia de conexión o pool.
+ * @param {number} cuotaId - ID de la cuota.
+ * @returns {Promise<Object|null>} Cuota con datos de cliente y producto, o null.
+ */
+async function buscarDetalleParaRecordatorio(db, cuotaId) {
+  try {
+    const query = `
+      SELECT
+        cu.id, cu.numero, cu.monto, cu.fecha_vencimiento, cu.estado, cu.ultimo_recordatorio,
+        cr.id AS credito_id,
+        c.id AS cliente_id, c.nombre AS cliente_nombre, c.telefono AS cliente_telefono,
+        p.nombre AS producto_nombre
+      FROM cuotas cu
+      JOIN creditos cr ON cu.credito_id = cr.id
+      JOIN clientes c ON cr.cliente_id = c.id
+      LEFT JOIN productos p ON cr.producto_id = p.id
+      WHERE cu.id = ?
+    `;
+    const [rows] = await db.execute(query, [cuotaId]);
+    return rows[0] || null;
+  } catch (error) {
+    throw new Error(`Error al buscar detalle de cuota para recordatorio: ${error.message}`);
+  }
+}
+
+/**
+ * Marca que se envió (o intentó enviar exitosamente) un recordatorio para
+ * una cuota, sellando la fecha/hora actual.
+ * @param {Object} db - Instancia de conexión o pool.
+ * @param {number} cuotaId - ID de la cuota.
+ * @returns {Promise<boolean>} True si se actualizó.
+ */
+async function marcarRecordatorioEnviado(db, cuotaId) {
+  try {
+    const [result] = await db.execute('UPDATE cuotas SET ultimo_recordatorio = NOW() WHERE id = ?', [cuotaId]);
+    return result.affectedRows > 0;
+  } catch (error) {
+    throw new Error(`Error al marcar recordatorio como enviado: ${error.message}`);
+  }
+}
+
 module.exports = {
   crearMuchas,
   buscarPorCredito,
   buscarPorId,
   marcarComoPagada,
   buscarVencidas,
-  actualizarEstado
+  actualizarEstado,
+  buscarParaRecordatorio,
+  buscarDetalleParaRecordatorio,
+  marcarRecordatorioEnviado
 };

@@ -32,7 +32,8 @@ export const routes: Routes = [
       { path: 'clientes', loadComponent: () => import('./pages/clientes/clientes.component').then(m => m.ClientesComponent) },
       { path: 'productos', loadComponent: () => import('./pages/productos/productos.component').then(m => m.ProductosComponent) },
       { path: 'pedidos', loadComponent: () => import('./pages/pedidos/pedidos.component').then(m => m.PedidosComponent) },
-      
+      { path: 'stock', loadComponent: () => import('./pages/stock/stock.component').then(m => m.StockComponent) },
+
       // Rutas de Créditos
       { path: 'creditos', loadComponent: () => import('./pages/creditos/creditos.component').then(m => m.CreditosComponent) },
       { path: 'creditos/nuevo', loadComponent: () => import('./pages/creditos/nuevo-credito/nuevo-credito.component').then(m => m.NuevoCreditoComponent) },

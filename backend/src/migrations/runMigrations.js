@@ -1,7 +1,10 @@
 const fs = require('fs');
 const path = require('path');
-const pool = require('../config/database');
+const mysql = require('mysql2/promise');
 
+// Las migraciones son archivos .sql locales y de confianza que pueden traer múltiples
+// sentencias, así que usan su propia conexión con multipleStatements habilitado en vez
+// del pool compartido de la app (que no debe tenerlo habilitado por seguridad).
 async function runMigrations() {
   const migrationsDir = path.resolve(__dirname, '../../migrations');
   if (!fs.existsSync(migrationsDir)) {
@@ -9,8 +12,20 @@ async function runMigrations() {
     return;
   }
 
+  const dbName = process.env.NODE_ENV === 'test'
+    ? `${process.env.DB_NAME}_test`
+    : process.env.DB_NAME;
+
+  const connection = await mysql.createConnection({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: dbName,
+    multipleStatements: true
+  });
+
   try {
-    await pool.query(`
+    await connection.query(`
       CREATE TABLE IF NOT EXISTS migrations (
         id INT AUTO_INCREMENT PRIMARY KEY,
         filename VARCHAR(255) NOT NULL UNIQUE,
@@ -23,7 +38,7 @@ async function runMigrations() {
       .sort();
 
     for (const file of files) {
-      const [rows] = await pool.query('SELECT COUNT(*) as cnt FROM migrations WHERE filename = ?', [file]);
+      const [rows] = await connection.query('SELECT COUNT(*) as cnt FROM migrations WHERE filename = ?', [file]);
       if (rows[0].cnt > 0) {
         // already applied
         continue;
@@ -33,13 +48,15 @@ async function runMigrations() {
       console.log('Applying migration:', file);
       const sql = fs.readFileSync(fullPath, 'utf8');
       // Execute migration SQL (may contain multiple statements)
-      await pool.query(sql);
-      await pool.query('INSERT INTO migrations (filename) VALUES (?)', [file]);
+      await connection.query(sql);
+      await connection.query('INSERT INTO migrations (filename) VALUES (?)', [file]);
       console.log('Applied migration:', file);
     }
   } catch (err) {
     console.error('Migration error:', err.message || err);
     throw err;
+  } finally {
+    await connection.end();
   }
 }
 

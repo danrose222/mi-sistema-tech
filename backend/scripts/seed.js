@@ -201,6 +201,22 @@ async function runSeed() {
     await connection.query(`INSERT INTO cuentas_corrientes (cliente_id, tipo, monto, saldo_resultante, referencia_tipo, descripcion) VALUES (?, 'pago', -100000, 100000, 'cuota', 'Pago cuota 2')`, [clientesIds[6]]);
     await connection.query(`INSERT INTO cuentas_corrientes (cliente_id, tipo, monto, saldo_resultante, referencia_tipo, descripcion) VALUES (?, 'pago', -100000, 0, 'cuota', 'Pago cuota 3')`, [clientesIds[6]]);
 
+    // --> Crédito 4: moroso, 4 cuotas mensuales, 2 vencidas (segundo moroso para probar el filtro de la UI)
+    const [resCred4] = await connection.query(`
+      INSERT INTO creditos (cliente_id, monto_total, cantidad_cuotas, frecuencia, monto_cuota, fecha_primera_cuota, estado, notas)
+      VALUES (?, 160000, 4, 'mensual', 40000, '2026-03-10', 'moroso', 'Deuda atrasada hace 2 meses')
+    `, [clientesIds[7]]);
+    const cred4Id = resCred4.insertId;
+
+    for (let i = 1; i <= 4; i++) {
+      const estado = i <= 2 ? 'vencida' : 'pendiente';
+      await connection.query(`
+        INSERT INTO cuotas (credito_id, numero, monto, fecha_vencimiento, estado)
+        VALUES (?, ?, 40000, ?, ?)
+      `, [cred4Id, i, `2026-0${2 + i}-10`, estado]);
+    }
+    await connection.query(`INSERT INTO cuentas_corrientes (cliente_id, tipo, monto, saldo_resultante, referencia_tipo, referencia_id, descripcion) VALUES (?, 'venta', 160000, 160000, 'credito', ?, 'Crédito mensual (Atrasado)')`, [clientesIds[7], cred4Id]);
+
     await connection.commit();
     console.log('✅ Transacción exitosa. Todos los datos de prueba han sido generados en MySQL.');
 

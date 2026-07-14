@@ -1,5 +1,6 @@
 require('dotenv').config();
 process.env.JWT_SECRET = 'secret_test'; // Forzar secret para tests
+process.env.MP_WEBHOOK_SECRET = 'mp_webhook_secret_test'; // Forzar secret de webhook para tests
 const mysql = require('mysql2/promise');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');

@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const productoController = require('../controllers/productoController');
+const { authenticate } = require('../middleware/authMiddleware');
+
+router.use(authenticate);
 
 router.get('/', productoController.listarProductos);
 router.get('/barcode/:barcode', productoController.obtenerProductoPorBarcode);

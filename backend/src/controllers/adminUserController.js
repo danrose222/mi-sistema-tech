@@ -1,6 +1,25 @@
 const userModel = require('../models/userModel');
 const bcrypt = require('bcryptjs');
 
+exports.crear = async (req, res) => {
+  try {
+    const { username, password, nombre, rol } = req.body;
+    if (!username || !password) return res.status(400).json({ error: 'username and password required' });
+
+    const existing = await userModel.obtenerUsuarioPorUsername(username);
+    if (existing) return res.status(409).json({ error: 'username already exists' });
+
+    const salt = await bcrypt.genSalt(12);
+    const hash = await bcrypt.hash(password, salt);
+    const userId = await userModel.crearUsuario({ username, password_hash: hash, nombre, rol });
+    const usuario = await userModel.obtenerUsuarioPorId(userId);
+    res.status(201).json(usuario);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'error creating user' });
+  }
+};
+
 exports.listar = async (req, res) => {
   try {
     const usuarios = await userModel.listarUsuarios();

@@ -1,17 +1,16 @@
 import { Component, inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [FormsModule],
+  imports: [],
   template: `
     <div class="login-page">
       <div class="login-card card">
         <div class="login-header">
-          <h1 class="logo-mark" style="font-size: 1.8rem;">CEL<span class="dot">·</span>SHOP</h1>
+          <img src="assets/logo.jpeg" alt="Cel Shop Center" class="logo-img" style="height: 56px; margin: 0 auto;">
           <p class="login-sub">Panel de administración</p>
         </div>
 
@@ -19,15 +18,15 @@ import { AuthService } from '../../services/auth.service';
           <div class="error-msg">{{ errorMsg }}</div>
         }
 
-        <form (ngSubmit)="onSubmit()" #loginForm="ngForm">
+        <form (submit)="$event.preventDefault(); onSubmit(usernameInput.value, passwordInput.value)">
           <div class="field">
             <label for="username">Usuario</label>
-            <input 
-              type="text" 
-              id="username" 
-              name="username" 
-              [(ngModel)]="username" 
-              required
+            <input
+              #usernameInput
+              type="text"
+              id="username"
+              name="username"
+              autocomplete="username"
               class="form-input"
               placeholder="admin"
               autofocus
@@ -36,21 +35,21 @@ import { AuthService } from '../../services/auth.service';
 
           <div class="field">
             <label for="password">Contraseña</label>
-            <input 
-              type="password" 
-              id="password" 
-              name="password" 
-              [(ngModel)]="password" 
-              required
+            <input
+              #passwordInput
+              type="password"
+              id="password"
+              name="password"
+              autocomplete="current-password"
               class="form-input"
               placeholder="••••••••"
             >
           </div>
 
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             class="btn-primary submit-btn"
-            [disabled]="loginForm.invalid || isLoading"
+            [disabled]="isLoading"
           >
             {{ isLoading ? 'Ingresando...' : 'Iniciar sesión' }}
           </button>
@@ -65,7 +64,7 @@ import { AuthService } from '../../services/auth.service';
       align-items: center;
       min-height: 100vh;
       background: 
-        radial-gradient(ellipse at 50% 100%, rgba(59, 130, 246, 0.06) 0%, transparent 60%),
+        radial-gradient(ellipse at 50% 100%, rgba(0, 174, 239, 0.06) 0%, transparent 60%),
         var(--void);
       padding: 24px;
     }
@@ -115,8 +114,6 @@ export class LoginComponent {
   authService = inject(AuthService);
   router = inject(Router);
 
-  username = '';
-  password = '';
   errorMsg = '';
   isLoading = false;
 
@@ -126,13 +123,16 @@ export class LoginComponent {
     }
   }
 
-  onSubmit() {
-    if (!this.username || !this.password) return;
-    
+  onSubmit(username: string, password: string) {
+    if (!username || !password) {
+      this.errorMsg = 'Completá usuario y contraseña.';
+      return;
+    }
+
     this.isLoading = true;
     this.errorMsg = '';
 
-    this.authService.login(this.username, this.password).subscribe({
+    this.authService.login(username, password).subscribe({
       next: () => {
         this.isLoading = false;
         this.router.navigate(['/admin/dashboard']);

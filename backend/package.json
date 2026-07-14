@@ -8,7 +8,8 @@
     "test:watch": "NODE_ENV=test jest --watch",
     "test:coverage": "NODE_ENV=test jest --coverage --runInBand --detectOpenHandles --forceExit",
     "dev": "nodemon src/server.js",
-    "start": "node src/server.js"
+    "start": "node src/server.js",
+    "seed": "node scripts/seed.js"
   },
   "keywords": [],
   "author": "",

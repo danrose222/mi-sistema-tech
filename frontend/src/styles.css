@@ -1,11 +1,12 @@
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
 
 :root {
-  /* Palette — Cel Shop Center */
+  /* Palette — Cel Shop Center (tomada del logo: negro + azul celeste + cromado) */
   --void: #08080f;
   --slate: #111827;
-  --signal: #3b82f6;
-  --pulse: #60a5fa;
+  --signal: #00aeef;
+  --pulse: #4fd6ff;
+  --chrome: #c7cdd6;
   --ash: #9ca3af;
   --white: #f1f5f9;
   --danger: #ef4444;
@@ -14,7 +15,7 @@
   /* Surfaces */
   --surface-glass: rgba(17, 24, 39, 0.75);
   --border-dim: rgba(255, 255, 255, 0.06);
-  --border-hover: rgba(59, 130, 246, 0.4);
+  --border-hover: rgba(0, 174, 239, 0.4);
 
   /* Typography */
   --font-display: 'Space Grotesk', sans-serif;
@@ -63,6 +64,15 @@ body {
 }
 .logo-mark .dot {
   color: var(--signal);
+}
+
+.logo-img {
+  height: 40px;
+  width: auto;
+  display: block;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  object-fit: contain;
 }
 
 /* ── Cards ───────────────────────────────── */
@@ -114,7 +124,7 @@ body {
   line-height: 1;
 }
 .btn-primary:hover:not(:disabled) {
-  background-color: #2563eb;
+  background-color: #0060b0;
   transform: translateY(-1px);
 }
 .btn-primary:disabled {
@@ -142,7 +152,7 @@ body {
 }
 .btn-ghost:hover:not(:disabled) {
   border-color: var(--signal);
-  background-color: rgba(59, 130, 246, 0.08);
+  background-color: rgba(0, 174, 239, 0.08);
 }
 
 .btn-danger {

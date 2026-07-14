@@ -27,7 +27,17 @@ import { ClientesService, Cliente } from '../../../services/clientes.service';
         <div class="detalle-container">
           <div class="info-card">
             <h3>Información Personal</h3>
-            <div class="info-row"><span class="label">Nombre:</span> <span class="value">{{ cliente()?.nombre }}</span></div>
+            <div class="info-row">
+              <span class="label">Nombre:</span>
+              <span class="value">
+                {{ cliente()?.nombre }}
+                @if (cliente()?.historial_crediticio === 'Bueno' || cliente()?.historial_crediticio === 'Excelente') {
+                  <span class="badge-historial" [class.excelente]="cliente()?.historial_crediticio === 'Excelente'">
+                    ✓ Cliente Cumplidor
+                  </span>
+                }
+              </span>
+            </div>
             <div class="info-row"><span class="label">Email:</span> <span class="value">{{ cliente()?.email || 'No registrado' }}</span></div>
             <div class="info-row"><span class="label">Teléfono:</span> <span class="value">{{ cliente()?.telefono || 'No registrado' }}</span></div>
             <div class="info-row"><span class="label">Dirección:</span> <span class="value">{{ cliente()?.direccion || 'No registrada' }}</span></div>
@@ -97,6 +107,20 @@ import { ClientesService, Cliente } from '../../../services/clientes.service';
     .value {
       flex: 1;
       color: #111;
+    }
+    .badge-historial {
+      display: inline-block;
+      margin-left: 8px;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      background: #dcfce7;
+      color: #15803d;
+    }
+    .badge-historial.excelente {
+      background: #fef9c3;
+      color: #a16207;
     }
     .notas-text {
       background: #f5f5f5;

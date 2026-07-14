@@ -1,5 +1,5 @@
-import { Component, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, inject, PLATFORM_ID } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -10,6 +10,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { CarritoService } from '../../../services/carrito.service';
+import { OrderService } from '../../../services/order.service';
 
 @Component({
   selector: 'app-checkout',
@@ -209,6 +210,8 @@ export class CheckoutComponent {
   private fb = inject(FormBuilder);
   private snackBar = inject(MatSnackBar);
   private router = inject(Router);
+  private orderService = inject(OrderService);
+  private platformId = inject(PLATFORM_ID);
 
   isProcessing = false;
 
@@ -227,18 +230,35 @@ export class CheckoutComponent {
   }
 
   pagar() {
-    if (this.checkoutForm.invalid) return;
-    
+    if (this.checkoutForm.invalid || this.isProcessing) return;
+
     this.isProcessing = true;
 
-    // Aquí iría la llamada al backend para crear el Pedido y luego la Preferencia de MercadoPago.
-    // Como esto es frontend, mockearemos el éxito de MP.
-    
-    setTimeout(() => {
-      this.isProcessing = false;
-      this.snackBar.open('¡Pedido creado exitosamente!', 'OK', { duration: 5000 });
-      this.carrito.vaciar();
-      this.router.navigate(['/']);
-    }, 2000);
+    const { nombre, email, telefono } = this.checkoutForm.value;
+    const pedido = {
+      items: this.carrito.items().map(item => ({
+        producto_id: item.id,
+        cantidad: item.cantidad
+      })),
+      payer: {
+        email: email!,
+        name: nombre!,
+        phone: { number: telefono! }
+      }
+    };
+
+    this.orderService.crear(pedido).subscribe({
+      next: (res) => {
+        this.carrito.vaciar();
+        if (isPlatformBrowser(this.platformId)) {
+          window.location.href = res.pago_link;
+        }
+      },
+      error: (err) => {
+        this.isProcessing = false;
+        const mensaje = err?.error?.error || 'No pudimos procesar tu pedido. Intentá de nuevo.';
+        this.snackBar.open(mensaje, 'Cerrar', { duration: 6000 });
+      }
+    });
   }
 }
