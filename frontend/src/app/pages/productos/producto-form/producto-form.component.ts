@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, OnDestroy, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
@@ -6,8 +6,9 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { ProductosService } from '../../../services/productos.service';
+import { ProductosService, Producto } from '../../../services/productos.service';
 
 @Component({
   selector: 'app-producto-form',
@@ -19,7 +20,8 @@ import { ProductosService } from '../../../services/productos.service';
     MatFormFieldModule,
     MatInputModule,
     MatButtonModule,
-    MatCheckboxModule
+    MatCheckboxModule,
+    MatIconModule
   ],
   template: `
     <h2 mat-dialog-title>{{ isEdit ? 'Editar Producto' : 'Nuevo Producto' }}</h2>
@@ -71,6 +73,35 @@ import { ProductosService } from '../../../services/productos.service';
           </mat-form-field>
         </div>
 
+        <div class="imagen-uploader">
+          <label class="imagen-label">Imagen del producto</label>
+          <div class="imagen-preview-row">
+            @if (previewUrl()) {
+              <img [src]="previewUrl()" alt="Vista previa del producto" class="imagen-preview">
+            } @else {
+              <div class="imagen-placeholder">
+                <mat-icon>image</mat-icon>
+              </div>
+            }
+            <div class="imagen-actions">
+              <button type="button" mat-stroked-button color="primary" (click)="fileInput.click()">
+                <mat-icon>upload</mat-icon>
+                {{ previewUrl() ? 'Cambiar imagen' : 'Subir imagen' }}
+              </button>
+              @if (archivoSeleccionado()) {
+                <span class="imagen-filename">{{ archivoSeleccionado()!.name }}</span>
+              }
+              <span class="imagen-hint">JPG, PNG, WEBP o GIF · máx. 5MB</span>
+            </div>
+          </div>
+          <input
+            #fileInput
+            type="file"
+            class="imagen-input-hidden"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            (change)="onFileSelected($event)">
+        </div>
+
         <mat-checkbox formControlName="activo">Producto activo (visible en el catálogo)</mat-checkbox>
       </form>
     </mat-dialog-content>
@@ -95,14 +126,65 @@ import { ProductosService } from '../../../services/productos.service';
       grid-template-columns: 1fr 1fr;
       gap: 16px;
     }
+
+    .imagen-uploader { display: flex; flex-direction: column; gap: 8px; }
+    .imagen-label {
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: #64748b;
+    }
+    .imagen-preview-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .imagen-preview {
+      width: 88px;
+      height: 88px;
+      object-fit: cover;
+      border-radius: var(--radius-sm);
+      border: 1px solid #e2e8f0;
+    }
+    .imagen-placeholder {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 88px;
+      height: 88px;
+      border: 2px dashed #cbd5e1;
+      border-radius: var(--radius-sm);
+      color: #94a3b8;
+    }
+    .imagen-actions {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
+    }
+    .imagen-filename { font-size: 0.8rem; color: #1e293b; }
+    .imagen-hint { font-size: 0.75rem; color: #94a3b8; }
+    .imagen-input-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      overflow: hidden;
+      pointer-events: none;
+    }
   `]
 })
-export class ProductoFormComponent {
+export class ProductoFormComponent implements OnDestroy {
   dialogRef = inject(MatDialogRef<ProductoFormComponent>);
   data = inject(MAT_DIALOG_DATA);
   fb = inject(FormBuilder);
   productosService = inject(ProductosService);
   snackBar = inject(MatSnackBar);
+
+  // Imagen existente (si estamos editando) o preview del archivo recién
+  // elegido (via URL.createObjectURL). null = sin imagen -> placeholder.
+  previewUrl = signal<string | null>(this.data?.producto?.imagen_url || null);
+  archivoSeleccionado = signal<File | null>(null);
+  private objectUrlCreada: string | null = null;
 
   isEdit = !!this.data?.producto;
   isSaving = false;
@@ -117,13 +199,51 @@ export class ProductoFormComponent {
     activo: [this.data?.producto ? !!this.data.producto.activo : true]
   });
 
+  onFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const archivo = input.files?.[0] ?? null;
+    if (!archivo) return;
+
+    this.archivoSeleccionado.set(archivo);
+
+    if (this.objectUrlCreada) {
+      URL.revokeObjectURL(this.objectUrlCreada);
+    }
+    this.objectUrlCreada = URL.createObjectURL(archivo);
+    this.previewUrl.set(this.objectUrlCreada);
+  }
+
+  ngOnDestroy() {
+    if (this.objectUrlCreada) {
+      URL.revokeObjectURL(this.objectUrlCreada);
+    }
+  }
+
+  private buildPayload(): FormData | Partial<Producto> {
+    const archivo = this.archivoSeleccionado();
+    if (!archivo) {
+      return this.form.value;
+    }
+
+    // Con imagen nueva el body va como multipart: cada campo del form como
+    // string + el archivo bajo la key 'imagen' (coincide con
+    // uploadMiddleware.uploadProductoImagen = multer(...).single('imagen')).
+    const formData = new FormData();
+    Object.entries(this.form.value).forEach(([key, value]) => {
+      formData.append(key, String(value));
+    });
+    formData.append('imagen', archivo, archivo.name);
+    return formData;
+  }
+
   guardar() {
     if (this.form.invalid) return;
 
     this.isSaving = true;
+    const payload = this.buildPayload();
     const peticion = this.isEdit
-      ? this.productosService.actualizar(this.data.producto.id, this.form.value)
-      : this.productosService.crear(this.form.value);
+      ? this.productosService.actualizar(this.data.producto.id, payload)
+      : this.productosService.crear(payload);
 
     peticion.subscribe({
       next: () => {

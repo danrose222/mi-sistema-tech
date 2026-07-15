@@ -25,3 +25,7 @@ Thumbs.db
 dist/
 build/
 tmp/
+
+# Imágenes subidas por usuarios (no versionadas, se generan en runtime)
+uploads/productos/*
+!uploads/productos/.gitkeep

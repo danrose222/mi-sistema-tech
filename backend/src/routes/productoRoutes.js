@@ -2,14 +2,17 @@ const express = require('express');
 const router = express.Router();
 const productoController = require('../controllers/productoController');
 const { authenticate } = require('../middleware/authMiddleware');
+const { uploadProductoImagen } = require('../middleware/uploadMiddleware');
 
 router.use(authenticate);
 
 router.get('/', productoController.listarProductos);
 router.get('/barcode/:barcode', productoController.obtenerProductoPorBarcode);
 router.get('/:id', productoController.obtenerProducto);
-router.post('/', productoController.crearProducto);
-router.put('/:id', productoController.actualizarProducto);
+// uploadProductoImagen solo actúa si la request es multipart/form-data (hay
+// imagen nueva); si es JSON plano, no toca req.body y sigue de largo.
+router.post('/', uploadProductoImagen, productoController.crearProducto);
+router.put('/:id', uploadProductoImagen, productoController.actualizarProducto);
 router.delete('/:id', productoController.eliminarProducto);
 
 module.exports = router;

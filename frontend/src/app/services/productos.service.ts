@@ -11,6 +11,7 @@ export interface Producto {
   precio: number;
   stock: number;
   activo: boolean | number;
+  imagen_url?: string | null;
 }
 
 export interface ProductosResponse {
@@ -42,11 +43,15 @@ export class ProductosService {
     return this.http.get<{ success: boolean; data: Producto }>(`${this.apiUrl}/${id}`);
   }
 
-  crear(data: Partial<Producto>): Observable<{ success: boolean; data: Producto }> {
+  // Si hay imagen nueva el form arma un FormData (multipart); si no, sigue
+  // mandando el objeto plano de siempre. HttpClient detecta FormData y deja
+  // que el browser setee el Content-Type con el boundary correcto: no hay
+  // que tocar headers acá.
+  crear(data: Partial<Producto> | FormData): Observable<{ success: boolean; data: Producto }> {
     return this.http.post<{ success: boolean; data: Producto }>(this.apiUrl, data);
   }
 
-  actualizar(id: number, data: Partial<Producto>): Observable<{ success: boolean; data: Producto }> {
+  actualizar(id: number, data: Partial<Producto> | FormData): Observable<{ success: boolean; data: Producto }> {
     return this.http.put<{ success: boolean; data: Producto }>(`${this.apiUrl}/${id}`, data);
   }
 

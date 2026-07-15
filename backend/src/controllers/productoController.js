@@ -36,12 +36,31 @@ exports.obtenerProductoPorBarcode = async (req, res) => {
   }
 };
 
+// El middleware de multer (uploadMiddleware.uploadProductoImagen) ya corrió
+// antes de estos handlers: si la request era multipart, dejó el archivo en
+// req.file y los demás campos (como strings) en req.body; si era JSON normal,
+// no toca nada y req.file queda undefined.
+function buildImagenUrl(req) {
+  return req.file ? `/uploads/productos/${req.file.filename}` : undefined;
+}
+
+// FormData serializa todo a string (incluido el checkbox `activo`), así que
+// "false" llega como string no vacío -> truthy en JS. Se normaliza acá para
+// que el multipart se comporte igual que el JSON plano de siempre.
+function normalizarBody(req) {
+  const body = { ...req.body, imagen_url: buildImagenUrl(req) };
+  if (typeof body.activo === 'string') {
+    body.activo = body.activo !== 'false' && body.activo !== '0';
+  }
+  return body;
+}
+
 exports.crearProducto = async (req, res) => {
   try {
     if (!req.body.nombre || req.body.precio === undefined || req.body.precio === null) {
       return res.status(400).json({ success: false, error: 'nombre y precio son requeridos' });
     }
-    const id = await productoModel.crearProducto(req.body);
+    const id = await productoModel.crearProducto(normalizarBody(req));
     const producto = await productoModel.obtenerProductoPorId(id);
     res.status(201).json({ success: true, data: producto });
   } catch (err) {
@@ -55,7 +74,7 @@ exports.actualizarProducto = async (req, res) => {
     const existente = await productoModel.obtenerProductoPorId(req.params.id);
     if (!existente) return res.status(404).json({ success: false, error: 'Producto no encontrado' });
 
-    await productoModel.actualizarProducto(req.params.id, req.body);
+    await productoModel.actualizarProducto(req.params.id, normalizarBody(req));
     const producto = await productoModel.obtenerProductoPorId(req.params.id);
     res.json({ success: true, data: producto });
   } catch (err) {

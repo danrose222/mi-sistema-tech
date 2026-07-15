@@ -1,4 +1,5 @@
 const express = require('express');
+const path = require('path');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
@@ -30,6 +31,10 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 app.use(express.json());
+
+// Archivos subidos (imágenes de productos). Servidos como estáticos, sin
+// pasar por el rate limiter de /api/ ni por express.json.
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // 4. Rate Limiting: Prevenir fuerza bruta y DoS
 const apiLimiter = rateLimit({
