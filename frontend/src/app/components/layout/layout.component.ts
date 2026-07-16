@@ -1,34 +1,39 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
+import { MatIconModule } from '@angular/material/icon';
 import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-layout',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, MatIconModule],
   template: `
     <div class="admin-shell">
-      <aside class="sidebar">
+      @if (sidebarOpen()) {
+        <div class="sidebar-backdrop" (click)="closeSidebar()"></div>
+      }
+
+      <aside class="sidebar" [class.open]="sidebarOpen()">
         <div class="sidebar-brand">
           <img src="assets/logo.jpeg" alt="Cel Shop Center" class="logo-img" style="height: 36px;" routerLink="/admin/dashboard">
         </div>
         <nav class="sidebar-nav">
-          <a routerLink="/admin/dashboard" routerLinkActive="active" class="nav-item">
+          <a routerLink="/admin/dashboard" routerLinkActive="active" class="nav-item" (click)="closeSidebar()">
             <span class="nav-label">Dashboard</span>
           </a>
-          <a routerLink="/admin/clientes" routerLinkActive="active" class="nav-item">
+          <a routerLink="/admin/clientes" routerLinkActive="active" class="nav-item" (click)="closeSidebar()">
             <span class="nav-label">Clientes</span>
           </a>
-          <a routerLink="/admin/productos" routerLinkActive="active" class="nav-item">
+          <a routerLink="/admin/productos" routerLinkActive="active" class="nav-item" (click)="closeSidebar()">
             <span class="nav-label">Productos</span>
           </a>
-          <a routerLink="/admin/pedidos" routerLinkActive="active" class="nav-item">
+          <a routerLink="/admin/pedidos" routerLinkActive="active" class="nav-item" (click)="closeSidebar()">
             <span class="nav-label">Pedidos</span>
           </a>
-          <a routerLink="/admin/stock" routerLinkActive="active" class="nav-item">
+          <a routerLink="/admin/stock" routerLinkActive="active" class="nav-item" (click)="closeSidebar()">
             <span class="nav-label">Stock</span>
           </a>
-          <a routerLink="/admin/creditos" routerLinkActive="active" class="nav-item">
+          <a routerLink="/admin/creditos" routerLinkActive="active" class="nav-item" (click)="closeSidebar()">
             <span class="nav-label">Créditos</span>
           </a>
         </nav>
@@ -37,6 +42,9 @@ import { AuthService } from '../../services/auth.service';
       <main class="admin-main">
         <header class="topbar">
           <div class="topbar-left">
+            <button class="menu-toggle" (click)="sidebarOpen.set(true)" aria-label="Abrir menú">
+              <mat-icon>menu</mat-icon>
+            </button>
             <span class="greeting">{{ authService.currentUser()?.nombre }}</span>
             <span class="role">{{ authService.currentUser()?.rol }}</span>
           </div>
@@ -97,6 +105,22 @@ import { AuthService } from '../../services/auth.service';
       font-weight: 600;
     }
 
+    .sidebar-backdrop { display: none; }
+    .menu-toggle {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border: none;
+      background: transparent;
+      color: var(--white);
+      cursor: pointer;
+      border-radius: var(--radius-sm);
+      flex-shrink: 0;
+    }
+    .menu-toggle:hover { background-color: rgba(255, 255, 255, 0.06); }
+
     /* ── Main area ───────────────────── */
     .admin-main {
       flex: 1;
@@ -141,11 +165,46 @@ import { AuthService } from '../../services/auth.service';
       padding: 32px;
       overflow-y: auto;
     }
+
+    @media (max-width: 768px) {
+      .menu-toggle { display: flex; }
+
+      .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        z-index: 200;
+        transform: translateX(-100%);
+        transition: transform 0.25s ease;
+      }
+      .sidebar.open {
+        transform: translateX(0);
+      }
+
+      .sidebar-backdrop {
+        display: block;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 150;
+      }
+
+      .topbar { padding: 0 16px; }
+      .greeting { display: none; }
+      .admin-content { padding: 16px; }
+    }
   `]
 })
 export class LayoutComponent {
   authService = inject(AuthService);
   router = inject(Router);
+
+  sidebarOpen = signal(false);
+
+  closeSidebar() {
+    this.sidebarOpen.set(false);
+  }
 
   logout() {
     this.authService.logout();

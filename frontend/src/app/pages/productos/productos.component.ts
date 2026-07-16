@@ -182,7 +182,7 @@ import { ProductoFormComponent } from './producto-form/producto-form.component';
       border-color: var(--signal) !important;
       border-width: 2px;
     }
-    .table-container { position: relative; background: white; border-radius: 8px; overflow: hidden; }
+    .table-container { position: relative; background: white; border-radius: 8px; overflow-x: auto; overflow-y: hidden; }
     .loading-shade {
       position: absolute; top: 0; left: 0; bottom: 0; right: 0;
       background: rgba(255, 255, 255, 0.6);

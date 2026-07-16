@@ -200,7 +200,8 @@ import { ClienteDetalleComponent } from './cliente-detalle/cliente-detalle.compo
       position: relative;
       background: white;
       border-radius: 8px;
-      overflow: hidden;
+      overflow-x: auto;
+      overflow-y: hidden;
     }
     .loading-shade {
       position: absolute;

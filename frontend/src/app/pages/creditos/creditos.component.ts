@@ -215,7 +215,8 @@ import { CreditosService, Credito } from '../../services/creditos.service';
       position: relative;
       background: white;
       border-radius: 8px;
-      overflow: hidden;
+      overflow-x: auto;
+      overflow-y: hidden;
     }
     .loading-shade {
       position: absolute;
