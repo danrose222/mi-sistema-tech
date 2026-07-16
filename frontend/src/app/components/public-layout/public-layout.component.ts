@@ -27,7 +27,7 @@ import { CarritoService } from '../../services/carrito.service';
       <!-- NAVBAR -->
       <header class="navbar">
         <div class="navbar-inner">
-          <img src="assets/logo.jpeg" alt="Cel Shop Center" class="logo-img" routerLink="/">
+          <img src="assets/logo.jpeg" alt="Cel Shop Center" class="logo-img logo-blend" routerLink="/">
 
           <div class="search-wrapper hidden-mobile">
             <mat-icon class="search-icon">search</mat-icon>
@@ -63,7 +63,7 @@ import { CarritoService } from '../../services/carrito.service';
       <footer class="footer">
         <div class="footer-inner">
           <div class="footer-col">
-            <img src="assets/logo.jpeg" alt="Cel Shop Center" class="logo-img" style="height: 32px; margin-bottom: 12px;">
+            <img src="assets/logo.jpeg" alt="Cel Shop Center" class="logo-img logo-blend" style="height: 32px; margin-bottom: 12px;">
             <p>Tu tienda de tecnología de confianza en Argentina.</p>
           </div>
           <div class="footer-col">
@@ -76,8 +76,22 @@ import { CarritoService } from '../../services/carrito.service';
           </div>
           <div class="footer-col">
             <h4>Contacto</h4>
-            <p>ventas&#64;celshop.com.ar</p>
-            <p>+54 9 11 1234-5678</p>
+            <div class="contact-item">
+              <mat-icon>location_on</mat-icon>
+              <span>Dean Funes 463, Capilla del Monte, Córdoba</span>
+            </div>
+            <div class="contact-item">
+              <mat-icon>chat</mat-icon>
+              <a href="https://wa.me/5493548547661" target="_blank" rel="noopener">+54 9 3548 54-7661</a>
+            </div>
+            <div class="contact-item">
+              <mat-icon>call</mat-icon>
+              <a href="tel:+5493548544757">+54 9 3548 54-4757</a>
+            </div>
+            <div class="contact-item">
+              <mat-icon>mail</mat-icon>
+              <a href="mailto:ventas@celshop.com.ar">ventas&#64;celshop.com.ar</a>
+            </div>
           </div>
         </div>
         <div class="footer-bottom">
@@ -129,6 +143,14 @@ import { CarritoService } from '../../services/carrito.service';
       height: 100%;
     }
 
+    /* El logo original tiene fondo negro sólido: screen trata el negro como
+       no-op en la mezcla, así que el cuadrado se funde con el fondo oscuro
+       del navbar/footer y solo queda visible el isotipo cian/plateado. */
+    .logo-blend {
+      mix-blend-mode: screen;
+      cursor: pointer;
+    }
+
     /* Search */
     .search-wrapper {
       flex: 1;
@@ -137,19 +159,23 @@ import { CarritoService } from '../../services/carrito.service';
     }
     .search-wrapper input {
       width: 100%;
-      padding: 9px 16px 9px 40px;
-      background: rgba(255,255,255,0.04);
+      padding: 10px 18px 10px 42px;
+      background: rgba(255, 255, 255, 0.03);
       border: 1px solid var(--border-dim);
-      border-radius: var(--radius-sm);
+      border-radius: 100px;
       color: var(--white);
       font-size: 0.9rem;
       font-family: var(--font-body);
       outline: none;
-      transition: border-color 0.2s;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
       box-sizing: border-box;
     }
     .search-wrapper input::placeholder { color: var(--ash); }
-    .search-wrapper input:focus { border-color: var(--signal); }
+    .search-wrapper input:focus {
+      border-color: var(--signal);
+      background: rgba(255, 255, 255, 0.05);
+      box-shadow: 0 0 0 3px rgba(0, 174, 239, 0.12);
+    }
     .search-icon {
       position: absolute;
       left: 12px;
@@ -210,6 +236,29 @@ import { CarritoService } from '../../services/carrito.service';
       font-size: 0.9rem;
       line-height: 1.6;
     }
+    .contact-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 12px;
+      font-size: 0.9rem;
+      line-height: 1.5;
+      color: var(--white);
+    }
+    .contact-item mat-icon {
+      color: var(--signal);
+      font-size: 19px;
+      width: 19px;
+      height: 19px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .contact-item a {
+      color: var(--white);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+    .contact-item a:hover { color: var(--pulse); }
     .footer-col ul {
       list-style: none;
       padding: 0;
