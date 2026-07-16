@@ -13,7 +13,13 @@ import { CarritoService } from '../../services/carrito.service';
   template: `
     <div class="product card">
       <a class="product-img" [routerLink]="['/producto', producto.slug]">
-        <img [src]="producto.imagenes?.[0] || 'assets/producto-ejemplo.jpeg'" [alt]="producto.nombre" loading="lazy">
+        @if (producto.imagenes?.[0]) {
+          <img [src]="producto.imagenes[0]" [alt]="producto.nombre" loading="lazy">
+        } @else {
+          <div class="product-placeholder" aria-hidden="true">
+            <mat-icon>devices</mat-icon>
+          </div>
+        }
       </a>
       <div class="product-body">
         <a class="product-name" [routerLink]="['/producto', producto.slug]">{{ producto.nombre }}</a>
@@ -74,6 +80,25 @@ import { CarritoService } from '../../services/carrito.service';
     }
     .product:hover .product-img img {
       transform: scale(1.05);
+    }
+    .product-placeholder {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at 50% 42%, rgba(0, 174, 239, 0.14) 0%, transparent 68%);
+      transition: background 0.3s ease;
+    }
+    .product:hover .product-placeholder {
+      background: radial-gradient(circle at 50% 42%, rgba(0, 174, 239, 0.22) 0%, transparent 70%);
+    }
+    .product-placeholder mat-icon {
+      font-size: 64px;
+      width: 64px;
+      height: 64px;
+      color: var(--ash);
+      opacity: 0.55;
     }
     .product-body {
       padding: 20px 20px 0;
