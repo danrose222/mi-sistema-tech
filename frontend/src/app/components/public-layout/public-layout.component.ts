@@ -62,8 +62,8 @@ import { CarritoService } from '../../services/carrito.service';
       <!-- FOOTER -->
       <footer class="footer">
         <div class="footer-inner">
-          <div class="footer-col">
-            <img src="assets/logo.jpeg" alt="Cel Shop Center" class="logo-img logo-blend" style="height: 32px; margin-bottom: 12px;">
+          <div class="footer-col footer-col--brand">
+            <img src="assets/logo.jpeg" alt="Cel Shop Center" class="footer-logo logo-blend">
             <p>Tu tienda de tecnología de confianza en Argentina.</p>
           </div>
           <div class="footer-col">
@@ -71,11 +71,13 @@ import { CarritoService } from '../../services/carrito.service';
             <ul>
               <li><a routerLink="/">Inicio</a></li>
               <li><a routerLink="/productos">Productos</a></li>
+              <li><a routerLink="/productos">Destacados</a></li>
               <li><a routerLink="/login">Acceso empleados</a></li>
             </ul>
           </div>
           <div class="footer-col">
             <h4>Contacto</h4>
+            <p class="footer-financiacion">Financiación en cuotas con solo DNI. Aprobación rápida.</p>
             <div class="contact-item">
               <mat-icon>location_on</mat-icon>
               <span>Dean Funes 463, Capilla del Monte, Córdoba</span>
@@ -219,10 +221,10 @@ import { CarritoService } from '../../services/carrito.service';
     .footer-inner {
       display: grid;
       grid-template-columns: 1.5fr 1fr 1fr;
-      gap: 48px;
+      gap: 56px;
       max-width: 1200px;
       margin: 0 auto;
-      padding: 56px 24px 40px;
+      padding: 64px 24px 48px;
     }
     .footer-col h4 {
       color: var(--white);
@@ -235,6 +237,20 @@ import { CarritoService } from '../../services/carrito.service';
       margin: 0 0 8px 0;
       font-size: 0.9rem;
       line-height: 1.6;
+    }
+    .footer-col--brand { display: flex; flex-direction: column; }
+    .footer-logo {
+      width: 200px;
+      max-width: 100%;
+      height: auto;
+      display: block;
+      margin-bottom: 16px;
+    }
+    .footer-financiacion {
+      color: var(--white);
+      font-size: 0.85rem;
+      font-weight: 500;
+      margin: 0 0 16px 0;
     }
     .contact-item {
       display: flex;
@@ -286,7 +302,10 @@ import { CarritoService } from '../../services/carrito.service';
     @media (max-width: 768px) {
       .hidden-mobile { display: none !important; }
       .mobile-only { display: inline-flex !important; }
-      .footer-inner { grid-template-columns: 1fr; gap: 32px; }
+      .footer-inner { grid-template-columns: 1fr; gap: 36px; text-align: center; }
+      .footer-col--brand { align-items: center; }
+      .footer-logo { margin-left: auto; margin-right: auto; }
+      .contact-item { justify-content: center; }
 
       .navbar { height: auto; }
       .navbar-inner {
