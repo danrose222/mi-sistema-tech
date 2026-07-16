@@ -17,7 +17,29 @@ import { ProductoCardComponent } from '../../../components/producto-card/product
       <div class="hero-grid"></div>
       <div class="hero-glow hero-glow--a"></div>
       <div class="hero-glow hero-glow--b"></div>
-      <div class="hero-logo" aria-hidden="true"></div>
+      <div class="hero-visual" aria-hidden="true">
+        <div class="device-field">
+          <svg class="device-svg device-laptop-svg" viewBox="0 0 220 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M40 20h140a6 6 0 0 1 6 6v90H34V26a6 6 0 0 1 6-6Z" stroke="var(--signal)" stroke-width="2"/>
+            <rect x="52" y="34" width="116" height="70" rx="3" stroke="var(--signal)" stroke-width="1.3" opacity="0.55"/>
+            <path d="M10 130h200l-14 20H24l-14-20Z" stroke="var(--signal)" stroke-width="2" stroke-linejoin="round"/>
+            <line x1="95" y1="130" x2="125" y2="130" stroke="var(--signal)" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+
+          <svg class="device-svg device-phone-svg" viewBox="0 0 120 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="4" y="4" width="112" height="232" rx="24" stroke="var(--signal)" stroke-width="2.5"/>
+            <rect x="16" y="26" width="88" height="188" rx="4" stroke="var(--signal)" stroke-width="1.2" opacity="0.5"/>
+            <circle cx="60" cy="16" r="2.4" fill="var(--signal)"/>
+            <line x1="44" y1="226" x2="76" y2="226" stroke="var(--signal)" stroke-width="2.5" stroke-linecap="round"/>
+          </svg>
+
+          <svg class="device-svg device-headphones-svg" viewBox="0 0 160 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M20 80V60a60 60 0 0 1 120 0v20" stroke="var(--signal)" stroke-width="2.5" stroke-linecap="round"/>
+            <rect x="6" y="74" width="30" height="46" rx="14" stroke="var(--signal)" stroke-width="2.5"/>
+            <rect x="124" y="74" width="30" height="46" rx="14" stroke="var(--signal)" stroke-width="2.5"/>
+          </svg>
+        </div>
+      </div>
 
       <div class="hero-inner">
         <span class="hero-badge">
@@ -98,8 +120,8 @@ import { ProductoCardComponent } from '../../../components/producto-card/product
           </div>
           <div class="feature-card">
             <div class="feature-icon"><mat-icon>credit_score</mat-icon></div>
-            <h3>Cuotas sin interés</h3>
-            <p>Pagá en hasta 12 cuotas con tu tarjeta, sin letra chica.</p>
+            <h3>Llevalo con tu DNI</h3>
+            <p>Financiación en cuotas con solo DNI. Aprobación rápida.</p>
           </div>
           <div class="feature-card">
             <div class="feature-icon"><mat-icon>verified_user</mat-icon></div>
@@ -165,20 +187,59 @@ import { ProductoCardComponent } from '../../../components/producto-card/product
       0%, 100% { transform: translate(0, 0); }
       50% { transform: translate(-24px, 24px); }
     }
-    .hero-logo {
+    /* Composición del hero: ecosistema de dispositivos como trazos SVG
+       holográficos (stroke --signal + drop-shadow) flotando sobre el campo
+       de fuerza radial. */
+    .hero-visual {
       position: absolute;
       top: 50%;
-      right: -6%;
+      right: -4%;
       transform: translateY(-50%);
       width: 620px;
       height: 620px;
-      background-image: url('/assets/logo.jpeg');
-      background-size: contain;
-      background-repeat: no-repeat;
-      background-position: center;
-      opacity: 0.16;
-      filter: drop-shadow(0 0 60px rgba(0, 174, 239, 0.25));
       pointer-events: none;
+    }
+    .device-field {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 52% 48%, rgba(0, 174, 239, 0.18) 0%, rgba(0, 174, 239, 0.05) 45%, transparent 72%);
+    }
+    .device-svg {
+      position: absolute;
+      overflow: visible;
+    }
+    .device-laptop-svg {
+      width: 300px;
+      bottom: 70px;
+      right: -10px;
+      filter: drop-shadow(0 0 18px rgba(0, 174, 239, 0.45));
+      animation: floatLaptop 9s ease-in-out infinite;
+    }
+    .device-phone-svg {
+      width: 140px;
+      top: 76px;
+      right: 160px;
+      filter: drop-shadow(0 0 16px rgba(0, 174, 239, 0.5));
+      animation: floatPhone 7s ease-in-out infinite;
+    }
+    .device-headphones-svg {
+      width: 160px;
+      top: 4px;
+      right: 300px;
+      filter: drop-shadow(0 0 16px rgba(0, 174, 239, 0.4));
+      animation: floatHeadphones 8s ease-in-out infinite;
+    }
+    @keyframes floatPhone {
+      0%, 100% { transform: translateY(0) rotate(-8deg); }
+      50% { transform: translateY(-16px) rotate(-8deg); }
+    }
+    @keyframes floatLaptop {
+      0%, 100% { transform: translateY(0) rotate(5deg); }
+      50% { transform: translateY(14px) rotate(5deg); }
+    }
+    @keyframes floatHeadphones {
+      0%, 100% { transform: translateY(0) rotate(6deg); }
+      50% { transform: translateY(-12px) rotate(6deg); }
     }
 
     .hero-inner {
@@ -243,6 +304,16 @@ import { ProductoCardComponent } from '../../../components/producto-card/product
     }
     .btn-lg { padding: 14px 32px; font-size: 1rem; }
 
+    /* ── Microinteracciones: entrada sutil al cargar ─────── */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .hero-badge { animation: fadeInUp 0.6s ease both; }
+    .hero h1 { animation: fadeInUp 0.6s ease 0.08s both; }
+    .hero-sub { animation: fadeInUp 0.6s ease 0.16s both; }
+    .hero-actions { animation: fadeInUp 0.6s ease 0.24s both; }
+
     /* ── Trust strip ────────────────────── */
     .trust-strip {
       position: relative;
@@ -266,7 +337,11 @@ import { ProductoCardComponent } from '../../../components/producto-card/product
       align-items: center;
       gap: 14px;
       padding: 24px;
+      animation: fadeInUp 0.5s ease both;
     }
+    .trust-item:nth-child(1) { animation-delay: 0.1s; }
+    .trust-item:nth-child(2) { animation-delay: 0.17s; }
+    .trust-item:nth-child(3) { animation-delay: 0.24s; }
     .trust-item:not(:last-child) {
       border-right: 1px solid var(--border-dim);
     }
@@ -274,28 +349,29 @@ import { ProductoCardComponent } from '../../../components/producto-card/product
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 44px;
-      height: 44px;
+      width: 52px;
+      height: 52px;
       flex-shrink: 0;
       border-radius: var(--radius-sm);
       background: rgba(0, 174, 239, 0.1);
+      box-shadow: inset 0 0 14px rgba(0, 174, 239, 0.28);
     }
     .trust-icon mat-icon {
       color: var(--signal);
-      font-size: 24px;
-      width: 24px;
-      height: 24px;
+      font-size: 28px;
+      width: 28px;
+      height: 28px;
     }
     .trust-item strong {
       display: block;
       color: var(--white);
-      font-size: 0.9rem;
+      font-size: 0.96rem;
       font-weight: 600;
       margin-bottom: 2px;
     }
     .trust-item span {
       color: var(--ash);
-      font-size: 0.82rem;
+      font-size: 0.87rem;
     }
 
     /* ── Sections ────────────────────────── */
@@ -356,6 +432,14 @@ import { ProductoCardComponent } from '../../../components/producto-card/product
       grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
       gap: 24px;
     }
+    .product-grid > * {
+      animation: fadeInUp 0.5s ease both;
+    }
+    .product-grid > *:nth-child(1) { animation-delay: 0.05s; }
+    .product-grid > *:nth-child(2) { animation-delay: 0.1s; }
+    .product-grid > *:nth-child(3) { animation-delay: 0.15s; }
+    .product-grid > *:nth-child(4) { animation-delay: 0.2s; }
+    .product-grid > *:nth-child(n+5) { animation-delay: 0.25s; }
     .skeleton {
       height: 380px;
       background: var(--slate);
@@ -380,7 +464,12 @@ import { ProductoCardComponent } from '../../../components/producto-card/product
       border-radius: var(--radius-lg);
       padding: 32px 24px;
       transition: border-color 0.2s ease, transform 0.2s ease;
+      animation: fadeInUp 0.5s ease both;
     }
+    .feature-card:nth-child(1) { animation-delay: 0.05s; }
+    .feature-card:nth-child(2) { animation-delay: 0.12s; }
+    .feature-card:nth-child(3) { animation-delay: 0.19s; }
+    .feature-card:nth-child(4) { animation-delay: 0.26s; }
     .feature-card:hover {
       border-color: var(--border-hover);
       transform: translateY(-4px);
@@ -453,7 +542,7 @@ import { ProductoCardComponent } from '../../../components/producto-card/product
 
     /* ── Responsive ──────────────────────── */
     @media (max-width: 900px) {
-      .hero-logo { opacity: 0.08; width: 480px; height: 480px; right: -12%; }
+      .hero-visual { opacity: 0.5; width: 480px; height: 480px; right: -12%; }
     }
     @media (max-width: 768px) {
       .hero h1 { font-size: 2.5rem; }
