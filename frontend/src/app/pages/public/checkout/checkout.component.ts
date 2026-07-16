@@ -141,6 +141,10 @@ import { OrderService } from '../../../services/order.service';
     mat-card { border-radius: 12px; padding: 8px 0; }
     mat-card-header { margin-bottom: 24px; }
     mat-card-title { font-size: 1.25rem !important; font-weight: 600; }
+    mat-card-actions {
+      display: flex;
+      flex-direction: column;
+    }
 
     /* mat-card-title del formulario de facturación: sin esto hereda el
        color oscuro por defecto de Material, invisible sobre --void ya que
@@ -283,6 +287,10 @@ import { OrderService } from '../../../services/order.service';
     @media (max-width: 900px) {
       .checkout-layout { grid-template-columns: 1fr; }
       .form-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 480px) {
+      .page-container { padding: 32px 16px; }
+      .summary-row.total { font-size: 1.25rem; }
     }
   `]
 })

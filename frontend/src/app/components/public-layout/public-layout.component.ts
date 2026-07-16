@@ -29,7 +29,7 @@ import { CarritoService } from '../../services/carrito.service';
         <div class="navbar-inner">
           <img src="assets/logo.jpeg" alt="Cel Shop Center" class="logo-img logo-blend" routerLink="/">
 
-          <div class="search-wrapper hidden-mobile">
+          <div class="search-wrapper">
             <mat-icon class="search-icon">search</mat-icon>
             <input 
               type="text" 
@@ -287,6 +287,18 @@ import { CarritoService } from '../../services/carrito.service';
       .hidden-mobile { display: none !important; }
       .mobile-only { display: inline-flex !important; }
       .footer-inner { grid-template-columns: 1fr; gap: 32px; }
+
+      .navbar { height: auto; }
+      .navbar-inner {
+        flex-wrap: wrap;
+        gap: 12px;
+        padding: 10px 16px;
+      }
+      .search-wrapper {
+        order: 3;
+        flex-basis: 100%;
+        max-width: none;
+      }
     }
   `]
 })

@@ -546,12 +546,20 @@ import { ProductoCardComponent } from '../../../components/producto-card/product
     }
     @media (max-width: 768px) {
       .hero h1 { font-size: 2.5rem; }
-      .hero { padding: 72px 24px 64px; }
+      .hero { padding: 72px 20px 64px; }
+      .hero-visual { opacity: 0.22; width: 320px; height: 320px; top: 66%; right: -18%; }
       .trust-inner { flex-direction: column; margin-top: -24px; }
       .trust-item:not(:last-child) {
         border-right: none;
         border-bottom: 1px solid var(--border-dim);
       }
+      .section-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+    }
+    @media (max-width: 480px) {
+      .hero h1 { font-size: 2rem; }
+      .hero-sub { font-size: 1rem; }
+      .hero-actions { flex-direction: column; align-items: stretch; }
+      .hero-actions .btn-lg { justify-content: center; }
     }
   `]
 })
