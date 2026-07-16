@@ -101,13 +101,15 @@ import { OrderService } from '../../../services/order.service';
               </div>
             </mat-card-content>
             <mat-card-actions>
-              <button mat-flat-button color="primary" class="full-width btn-pay" 
+              <button mat-flat-button color="primary" class="full-width btn-pay"
                       [disabled]="checkoutForm.invalid || isProcessing"
                       (click)="pagar()">
+                <mat-icon class="mp-btn-icon">account_balance_wallet</mat-icon>
                 {{ isProcessing ? 'Procesando...' : 'Pagar con MercadoPago' }}
               </button>
               <div class="mp-badge">
-                <mat-icon>security</mat-icon> Pagos seguros por MercadoPago
+                <mat-icon>verified_user</mat-icon>
+                <span>Pagos seguros procesados por <strong>Mercado Pago</strong></span>
               </div>
             </mat-card-actions>
           </mat-card>
@@ -127,7 +129,7 @@ import { OrderService } from '../../../services/order.service';
       gap: 16px;
       margin-bottom: 32px;
     }
-    .page-title { margin: 0; font-size: 2rem; font-weight: 700; color: #0f172a; }
+    .page-title { margin: 0; font-size: 2rem; font-weight: 700; color: var(--white); }
 
     .checkout-layout {
       display: grid;
@@ -140,12 +142,58 @@ import { OrderService } from '../../../services/order.service';
     mat-card-header { margin-bottom: 24px; }
     mat-card-title { font-size: 1.25rem !important; font-weight: 600; }
 
+    /* mat-card-title del formulario de facturación: sin esto hereda el
+       color oscuro por defecto de Material, invisible sobre --void ya que
+       .mat-mdc-card es transparent !important a nivel global. */
+    .checkout-form ::ng-deep .mat-mdc-card-title {
+      color: var(--white);
+    }
+
     .form-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 16px;
     }
     .full-width { grid-column: 1 / -1; width: 100%; }
+
+    /* Los inputs viven en una mat-card transparente flotando sobre el fondo
+       oscuro de la página: Material pinta el texto tipeado con el color de
+       su tema claro por defecto -> ilegible. Se le da superficie propia
+       (--slate) al campo y se fuerza el texto a --white. */
+    .checkout-form ::ng-deep .mat-mdc-text-field-wrapper {
+      background-color: var(--slate);
+      border-radius: var(--radius-sm);
+    }
+    .checkout-form ::ng-deep input.mat-mdc-input-element,
+    .checkout-form ::ng-deep textarea.mat-mdc-input-element {
+      color: var(--white) !important;
+      caret-color: var(--white);
+    }
+    .checkout-form ::ng-deep input.mat-mdc-input-element::placeholder,
+    .checkout-form ::ng-deep textarea.mat-mdc-input-element::placeholder {
+      color: var(--ash) !important;
+      opacity: 1;
+    }
+    .checkout-form ::ng-deep .mat-mdc-floating-label {
+      color: var(--ash) !important;
+    }
+    .checkout-form ::ng-deep .mat-mdc-form-field-hint {
+      color: var(--ash);
+    }
+    .checkout-form ::ng-deep .mat-mdc-form-field-error {
+      color: var(--danger);
+    }
+    .checkout-form ::ng-deep .mdc-notched-outline__leading,
+    .checkout-form ::ng-deep .mdc-notched-outline__notch,
+    .checkout-form ::ng-deep .mdc-notched-outline__trailing {
+      border-color: var(--border-dim) !important;
+    }
+    .checkout-form ::ng-deep .mat-mdc-form-field.mat-focused .mdc-notched-outline__leading,
+    .checkout-form ::ng-deep .mat-mdc-form-field.mat-focused .mdc-notched-outline__notch,
+    .checkout-form ::ng-deep .mat-mdc-form-field.mat-focused .mdc-notched-outline__trailing {
+      border-color: var(--signal) !important;
+      border-width: 2px;
+    }
 
     /* Summary */
     .items-mini-list {
@@ -156,48 +204,81 @@ import { OrderService } from '../../../services/order.service';
       max-height: 300px;
       overflow-y: auto;
     }
+    /* Igual que .checkout-form: mat-card es transparente a nivel global, así
+       que este panel flota sobre --void y necesita sus propios colores
+       claros en vez de la paleta oscura pensada para tarjetas blancas. */
+    .checkout-summary ::ng-deep .mat-mdc-card-title {
+      color: var(--white);
+    }
     .mini-item {
       display: flex;
       gap: 12px;
       font-size: 0.95rem;
-      color: #334155;
+      color: var(--white);
     }
-    .mini-qty { font-weight: 600; color: #64748b; }
+    .mini-qty { font-weight: 600; color: var(--ash); }
     .mini-name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .mini-price { font-weight: 600; }
 
     .summary-totals {
-      border-top: 1px solid #e2e8f0;
+      border-top: 1px solid var(--border-dim);
       padding-top: 24px;
     }
     .summary-row {
       display: flex;
       justify-content: space-between;
       margin-bottom: 16px;
-      color: #475569;
+      color: var(--ash);
       font-size: 1.1rem;
     }
-    .free-shipping { color: #16a34a; font-weight: 600; }
+    .free-shipping { color: var(--success); font-weight: 600; }
     .summary-row.total {
       font-size: 1.5rem;
       font-weight: 700;
-      color: #0f172a;
+      color: var(--white);
       margin-bottom: 0;
     }
 
-    .btn-pay { padding: 12px 0; font-size: 1.1rem; border-radius: 8px; margin-bottom: 16px; }
-    
+    /* No tenemos el archivo de marca oficial de Mercado Pago disponible, así
+       que en vez de imitar su isotipo se usa su azul de marca (#009ee3) para
+       que el botón y el sello de abajo se lean como "esto lo procesa
+       Mercado Pago" sin reproducir su logo. */
+    .btn-pay {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 0;
+      font-size: 1.1rem;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      background-color: #009ee3 !important;
+    }
+    .mp-btn-icon { font-size: 20px; width: 20px; height: 20px; }
+    /* El estado disabled de Material calcula su color/fondo a partir de negro
+       semitransparente (pensado para superficies claras): sobre --void queda
+       un gris casi invisible. Se sobreescribe con la paleta oscura propia. */
+    .btn-pay:disabled {
+      background-color: rgba(255, 255, 255, 0.08) !important;
+      color: var(--ash) !important;
+    }
+
     .mp-badge {
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 8px;
-      color: #0ea5e9;
-      font-size: 0.85rem;
-      font-weight: 500;
+      padding: 10px 14px;
+      background: rgba(0, 158, 227, 0.1);
+      border: 1px solid rgba(0, 158, 227, 0.25);
+      border-radius: var(--radius-sm);
+      color: var(--ash);
+      font-size: 0.8rem;
       width: 100%;
+      box-sizing: border-box;
     }
-    .mp-badge mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    .mp-badge mat-icon { font-size: 18px; width: 18px; height: 18px; color: #009ee3; flex-shrink: 0; }
+    .mp-badge strong { color: #29b6f6; font-weight: 700; }
 
     @media (max-width: 900px) {
       .checkout-layout { grid-template-columns: 1fr; }
