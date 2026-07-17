@@ -29,7 +29,7 @@ function toPublico(producto) {
     stock: producto.stock,
     categoria_id: null,
     categoria_nombre: null,
-    imagenes: producto.imagen_url ? [producto.imagen_url] : []
+    imagenes: producto.imagenes || []
   };
 }
 

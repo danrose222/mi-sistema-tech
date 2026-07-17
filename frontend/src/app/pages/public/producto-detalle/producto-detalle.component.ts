@@ -122,17 +122,17 @@ import { CarritoService } from '../../../services/carrito.service';
       top: 100px;
     }
     .main-image {
-      background: white;
+      background: var(--slate);
       border-radius: 16px;
       padding: 24px;
       display: flex;
       align-items: center;
       justify-content: center;
       aspect-ratio: 1;
-      border: 1px solid #e2e8f0;
+      border: 1px solid var(--border-dim);
     }
     .main-image img { max-width: 100%; max-height: 100%; object-fit: contain; }
-    
+
     .thumbnails {
       display: flex;
       gap: 12px;
@@ -141,43 +141,47 @@ import { CarritoService } from '../../../services/carrito.service';
     }
     .thumbnail {
       width: 80px; height: 80px;
-      background: white;
-      border: 2px solid transparent;
+      background: var(--slate);
+      border: 2px solid var(--border-dim);
       border-radius: 8px;
       padding: 8px;
       cursor: pointer;
       display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: border-color 0.15s ease;
     }
-    .thumbnail.active { border-color: #0284c7; }
+    .thumbnail.active { border-color: var(--signal); }
+    .thumbnail:hover { border-color: var(--border-hover); }
     .thumbnail img { max-width: 100%; max-height: 100%; object-fit: contain; }
 
     /* Info */
     .breadcrumb { margin-bottom: 16px; font-size: 0.9rem; }
-    .cat-link { color: #0284c7; cursor: pointer; text-transform: uppercase; font-weight: 600; }
+    .cat-link { color: var(--signal); cursor: pointer; text-transform: uppercase; font-weight: 600; }
     .cat-link:hover { text-decoration: underline; }
 
-    .product-title { margin: 0 0 24px 0; font-size: 2.5rem; font-weight: 700; color: #0f172a; line-height: 1.2; }
-    
+    .product-title { margin: 0 0 24px 0; font-size: 2.5rem; font-weight: 700; color: var(--white); line-height: 1.2; }
+
     .price-section { margin-bottom: 24px; }
-    .price { display: block; font-size: 3rem; font-weight: 800; color: #1e293b; }
-    .installments { color: #16a34a; font-weight: 500; font-size: 1rem; }
+    .price { display: block; font-size: 3rem; font-weight: 800; color: var(--signal); }
+    .installments { color: var(--success); font-weight: 500; font-size: 1rem; }
 
     .stock-status { margin-bottom: 32px; font-size: 1.1rem; font-weight: 500; }
-    .in-stock { color: #16a34a; display: flex; align-items: center; gap: 8px; }
-    .out-stock { color: #dc2626; display: flex; align-items: center; gap: 8px; }
+    .in-stock { color: var(--success); display: flex; align-items: center; gap: 8px; }
+    .out-stock { color: var(--danger); display: flex; align-items: center; gap: 8px; }
 
     .actions { display: flex; flex-direction: column; gap: 16px; margin-bottom: 40px; }
     .btn-block { width: 100%; padding: 12px 0; font-size: 1.1rem; border-radius: 8px; }
 
     .features-list { display: flex; flex-direction: column; gap: 16px; margin-bottom: 40px; }
-    .feat { display: flex; align-items: center; gap: 12px; color: #475569; }
-    .feat mat-icon { color: #0284c7; }
+    .feat { display: flex; align-items: center; gap: 12px; color: var(--ash); }
+    .feat mat-icon { color: var(--signal); }
 
-    .description-section h3 { font-size: 1.5rem; margin-bottom: 16px; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; }
-    .desc-text { color: #475569; line-height: 1.8; font-size: 1.05rem; }
+    .description-section h3 { font-size: 1.5rem; margin-bottom: 16px; color: var(--white); border-bottom: 1px solid var(--border-dim); padding-bottom: 8px; }
+    .desc-text { color: var(--ash); line-height: 1.8; font-size: 1.05rem; }
 
     .error-state { text-align: center; padding: 100px 24px; }
-    .error-state mat-icon { font-size: 64px; width: 64px; height: 64px; color: #cbd5e1; margin-bottom: 16px; }
+    .error-state mat-icon { font-size: 64px; width: 64px; height: 64px; color: var(--ash); margin-bottom: 16px; }
+    .error-state h2 { color: var(--white); }
 
     @media (max-width: 900px) {
       .product-layout { grid-template-columns: 1fr; gap: 40px; }

@@ -72,7 +72,6 @@ import { CarritoService } from '../../services/carrito.service';
               <li><a routerLink="/">Inicio</a></li>
               <li><a routerLink="/productos">Productos</a></li>
               <li><a routerLink="/productos">Destacados</a></li>
-              <li><a routerLink="/login">Acceso empleados</a></li>
             </ul>
           </div>
           <div class="footer-col">

@@ -29,8 +29,8 @@ function fileFilter(req, file, cb) {
 const upload = multer({
   storage,
   fileFilter,
-  limits: { fileSize: 5 * 1024 * 1024 } // 5MB
-}).single('imagen');
+  limits: { fileSize: 5 * 1024 * 1024 } // 5MB por archivo
+}).array('imagenes', 5);
 
 // Traduce errores de multer (tipo/tamaño inválido) a 400 en vez de dejarlos
 // caer como 500 en el manejador global de errores de app.js.

@@ -74,10 +74,17 @@ import { ProductosService, Producto } from '../../../services/productos.service'
         </div>
 
         <div class="imagen-uploader">
-          <label class="imagen-label">Imagen del producto</label>
+          <label class="imagen-label">Imágenes del producto (hasta 5, la primera es la principal)</label>
           <div class="imagen-preview-row">
-            @if (previewUrl()) {
-              <img [src]="previewUrl()" alt="Vista previa del producto" class="imagen-preview">
+            @if (previewUrls().length > 0) {
+              @for (url of previewUrls(); track $index) {
+                <div class="imagen-preview-item" [class.principal]="$index === 0">
+                  <img [src]="url" alt="Vista previa del producto">
+                  @if ($index === 0) {
+                    <span class="imagen-badge">Principal</span>
+                  }
+                </div>
+              }
             } @else {
               <div class="imagen-placeholder">
                 <mat-icon>image</mat-icon>
@@ -86,20 +93,21 @@ import { ProductosService, Producto } from '../../../services/productos.service'
             <div class="imagen-actions">
               <button type="button" mat-stroked-button color="primary" (click)="fileInput.click()">
                 <mat-icon>upload</mat-icon>
-                {{ previewUrl() ? 'Cambiar imagen' : 'Subir imagen' }}
+                {{ previewUrls().length > 0 ? 'Cambiar imágenes' : 'Subir imágenes' }}
               </button>
-              @if (archivoSeleccionado()) {
-                <span class="imagen-filename">{{ archivoSeleccionado()!.name }}</span>
+              @if (archivosSeleccionados().length > 0) {
+                <span class="imagen-filename">{{ archivosSeleccionados().length }} archivo(s) seleccionado(s)</span>
               }
-              <span class="imagen-hint">JPG, PNG, WEBP o GIF · máx. 5MB</span>
+              <span class="imagen-hint">JPG, PNG, WEBP o GIF · máx. 5MB c/u · hasta 5 fotos</span>
             </div>
           </div>
           <input
             #fileInput
             type="file"
+            multiple
             class="imagen-input-hidden"
             accept="image/jpeg,image/png,image/webp,image/gif"
-            (change)="onFileSelected($event)">
+            (change)="onFilesSelected($event)">
         </div>
 
         <mat-checkbox formControlName="activo">Producto activo (visible en el catálogo)</mat-checkbox>
@@ -136,14 +144,38 @@ import { ProductosService, Producto } from '../../../services/productos.service'
     .imagen-preview-row {
       display: flex;
       align-items: center;
-      gap: 16px;
+      flex-wrap: wrap;
+      gap: 12px;
     }
-    .imagen-preview {
-      width: 88px;
-      height: 88px;
+    .imagen-preview-item {
+      position: relative;
+      width: 72px;
+      height: 72px;
+      flex-shrink: 0;
+    }
+    .imagen-preview-item img {
+      width: 100%;
+      height: 100%;
       object-fit: cover;
       border-radius: var(--radius-sm);
       border: 1px solid #e2e8f0;
+      display: block;
+    }
+    .imagen-preview-item.principal img {
+      border: 2px solid var(--signal);
+    }
+    .imagen-badge {
+      position: absolute;
+      bottom: -8px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--signal);
+      color: white;
+      font-size: 0.6rem;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 100px;
+      white-space: nowrap;
     }
     .imagen-placeholder {
       display: flex;
@@ -180,11 +212,11 @@ export class ProductoFormComponent implements OnDestroy {
   productosService = inject(ProductosService);
   snackBar = inject(MatSnackBar);
 
-  // Imagen existente (si estamos editando) o preview del archivo recién
-  // elegido (via URL.createObjectURL). null = sin imagen -> placeholder.
-  previewUrl = signal<string | null>(this.data?.producto?.imagen_url || null);
-  archivoSeleccionado = signal<File | null>(null);
-  private objectUrlCreada: string | null = null;
+  // Imágenes existentes (si estamos editando) o previews de los archivos
+  // recién elegidos (via URL.createObjectURL). Array vacío -> placeholder.
+  previewUrls = signal<string[]>(this.data?.producto?.imagenes || []);
+  archivosSeleccionados = signal<File[]>([]);
+  private objectUrlsCreadas: string[] = [];
 
   isEdit = !!this.data?.producto;
   isSaving = false;
@@ -199,40 +231,36 @@ export class ProductoFormComponent implements OnDestroy {
     activo: [this.data?.producto ? !!this.data.producto.activo : true]
   });
 
-  onFileSelected(event: Event) {
+  onFilesSelected(event: Event) {
     const input = event.target as HTMLInputElement;
-    const archivo = input.files?.[0] ?? null;
-    if (!archivo) return;
+    const archivos = Array.from(input.files ?? []).slice(0, 5);
+    if (archivos.length === 0) return;
 
-    this.archivoSeleccionado.set(archivo);
+    this.archivosSeleccionados.set(archivos);
 
-    if (this.objectUrlCreada) {
-      URL.revokeObjectURL(this.objectUrlCreada);
-    }
-    this.objectUrlCreada = URL.createObjectURL(archivo);
-    this.previewUrl.set(this.objectUrlCreada);
+    this.objectUrlsCreadas.forEach((url) => URL.revokeObjectURL(url));
+    this.objectUrlsCreadas = archivos.map((archivo) => URL.createObjectURL(archivo));
+    this.previewUrls.set(this.objectUrlsCreadas);
   }
 
   ngOnDestroy() {
-    if (this.objectUrlCreada) {
-      URL.revokeObjectURL(this.objectUrlCreada);
-    }
+    this.objectUrlsCreadas.forEach((url) => URL.revokeObjectURL(url));
   }
 
   private buildPayload(): FormData | Partial<Producto> {
-    const archivo = this.archivoSeleccionado();
-    if (!archivo) {
+    const archivos = this.archivosSeleccionados();
+    if (archivos.length === 0) {
       return this.form.value;
     }
 
-    // Con imagen nueva el body va como multipart: cada campo del form como
-    // string + el archivo bajo la key 'imagen' (coincide con
-    // uploadMiddleware.uploadProductoImagen = multer(...).single('imagen')).
+    // Con imágenes nuevas el body va como multipart: cada campo del form como
+    // string + cada archivo bajo la key 'imagenes' repetida (coincide con
+    // uploadMiddleware.uploadProductoImagen = multer(...).array('imagenes', 5)).
     const formData = new FormData();
     Object.entries(this.form.value).forEach(([key, value]) => {
       formData.append(key, String(value));
     });
-    formData.append('imagen', archivo, archivo.name);
+    archivos.forEach((archivo) => formData.append('imagenes', archivo, archivo.name));
     return formData;
   }
 

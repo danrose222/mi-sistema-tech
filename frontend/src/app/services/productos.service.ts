@@ -11,7 +11,7 @@ export interface Producto {
   precio: number;
   stock: number;
   activo: boolean | number;
-  imagen_url?: string | null;
+  imagenes?: string[];
 }
 
 export interface ProductosResponse {

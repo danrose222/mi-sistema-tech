@@ -37,18 +37,19 @@ exports.obtenerProductoPorBarcode = async (req, res) => {
 };
 
 // El middleware de multer (uploadMiddleware.uploadProductoImagen) ya corrió
-// antes de estos handlers: si la request era multipart, dejó el archivo en
-// req.file y los demás campos (como strings) en req.body; si era JSON normal,
-// no toca nada y req.file queda undefined.
-function buildImagenUrl(req) {
-  return req.file ? `/uploads/productos/${req.file.filename}` : undefined;
+// antes de estos handlers: si la request era multipart, dejó los archivos en
+// req.files (hasta 5) y los demás campos (como strings) en req.body; si era
+// JSON normal, no toca nada y req.files queda undefined.
+function buildImagenUrls(req) {
+  if (!req.files || req.files.length === 0) return undefined;
+  return req.files.map((file) => `/uploads/productos/${file.filename}`);
 }
 
 // FormData serializa todo a string (incluido el checkbox `activo`), así que
 // "false" llega como string no vacío -> truthy en JS. Se normaliza acá para
 // que el multipart se comporte igual que el JSON plano de siempre.
 function normalizarBody(req) {
-  const body = { ...req.body, imagen_url: buildImagenUrl(req) };
+  const body = { ...req.body };
   if (typeof body.activo === 'string') {
     body.activo = body.activo !== 'false' && body.activo !== '0';
   }
@@ -61,6 +62,12 @@ exports.crearProducto = async (req, res) => {
       return res.status(400).json({ success: false, error: 'nombre y precio son requeridos' });
     }
     const id = await productoModel.crearProducto(normalizarBody(req));
+
+    const urls = buildImagenUrls(req);
+    if (urls) {
+      await productoModel.agregarImagenes(id, urls);
+    }
+
     const producto = await productoModel.obtenerProductoPorId(id);
     res.status(201).json({ success: true, data: producto });
   } catch (err) {
@@ -75,6 +82,15 @@ exports.actualizarProducto = async (req, res) => {
     if (!existente) return res.status(404).json({ success: false, error: 'Producto no encontrado' });
 
     await productoModel.actualizarProducto(req.params.id, normalizarBody(req));
+
+    // Si se subieron imágenes nuevas, reemplazan por completo al set anterior
+    // (no se mezclan) para que el admin siempre tenga control exacto de qué
+    // fotos quedan asociadas al producto.
+    const urls = buildImagenUrls(req);
+    if (urls) {
+      await productoModel.reemplazarImagenes(req.params.id, urls);
+    }
+
     const producto = await productoModel.obtenerProductoPorId(req.params.id);
     res.json({ success: true, data: producto });
   } catch (err) {
