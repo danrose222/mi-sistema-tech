@@ -144,13 +144,15 @@ exports.crearPedido = async (req, res) => {
   }
 };
 
+const MARGEN_ERROR_MONTO = 0.01;
+
 // Venta de mostrador (POS): a diferencia de crearPedido, la ruta exige
-// autenticación (ver pedidoRoutes.js) y el pago ya se cobró en efectivo en
-// el momento, así que el pedido nace directamente en estado "pagado" — no
-// pasa por 'pendiente' ni por el cron de liberación de reservas de 48hs.
+// autenticación (ver pedidoRoutes.js) y el pago ya se cobró en el momento,
+// así que el pedido nace directamente en estado "pagado" — no pasa por
+// 'pendiente' ni por el cron de liberación de reservas de 48hs.
 exports.crearVentaPos = async (req, res) => {
   const pool = require('../config/database');
-  const { items } = req.body;
+  const { items, desglose_pago } = req.body;
 
   if (!items || !Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: 'La venta debe contener al menos un item' });
@@ -159,6 +161,18 @@ exports.crearVentaPos = async (req, res) => {
     if (!Number.isInteger(item.producto_id) || !Number.isInteger(item.cantidad) || item.cantidad <= 0) {
       return res.status(400).json({ error: 'Cada item debe tener producto_id y cantidad (entero positivo) válidos' });
     }
+  }
+
+  if (!desglose_pago || typeof desglose_pago !== 'object') {
+    return res.status(400).json({ error: 'Debe indicar el desglose de pago (efectivo, tarjeta, transferencia)' });
+  }
+  const montos = {
+    efectivo: Number(desglose_pago.efectivo) || 0,
+    tarjeta: Number(desglose_pago.tarjeta) || 0,
+    transferencia: Number(desglose_pago.transferencia) || 0
+  };
+  if (Object.values(montos).some((monto) => monto < 0 || !Number.isFinite(monto))) {
+    return res.status(400).json({ error: 'Los montos del desglose de pago no pueden ser negativos' });
   }
 
   const connection = await pool.getConnection();
@@ -186,7 +200,32 @@ exports.crearVentaPos = async (req, res) => {
       });
     }
 
-    const total = itemsVerificados.reduce((sum, item) => sum + item.precio_unitario * item.cantidad, 0);
+    const total = Math.round(itemsVerificados.reduce((sum, item) => sum + item.precio_unitario * item.cantidad, 0) * 100) / 100;
+
+    // Tarjeta y transferencia son montos exactos (no hay "vuelto" en un
+    // pago electrónico): si entre las dos superan el total, es un error de
+    // carga del cajero, no una situación real de cobro.
+    const noEfectivo = Math.round((montos.tarjeta + montos.transferencia) * 100) / 100;
+    if (noEfectivo > total + MARGEN_ERROR_MONTO) {
+      throw Object.assign(
+        new Error(`La tarjeta y/o transferencia ($${noEfectivo}) no pueden superar el total de la venta ($${total})`),
+        { statusCode: 400 }
+      );
+    }
+
+    const totalTendido = Math.round((montos.efectivo + noEfectivo) * 100) / 100;
+    if (totalTendido < total - MARGEN_ERROR_MONTO) {
+      throw Object.assign(
+        new Error(`El pago ingresado ($${totalTendido}) no cubre el total de la venta ($${total})`),
+        { statusCode: 400 }
+      );
+    }
+
+    // El vuelto sale de la parte en efectivo: es la única forma de pago que
+    // admite un monto "de más" tendido por el cliente.
+    const vuelto = Math.max(0, Math.round((totalTendido - total) * 100) / 100);
+    const efectivoAplicado = Math.round((montos.efectivo - vuelto) * 100) / 100;
+
     const [result] = await connection.query(
       "INSERT INTO pedidos (cliente_id, total, metodo_pago, estado) VALUES (NULL, ?, 'efectivo_pos', 'pagado')",
       [total]
@@ -196,11 +235,27 @@ exports.crearVentaPos = async (req, res) => {
     const values = itemsVerificados.map((item) => [pedidoId, item.producto_id, item.cantidad, item.precio_unitario]);
     await connection.query('INSERT INTO pedido_items (pedido_id, producto_id, cantidad, precio_unitario) VALUES ?', [values]);
 
+    // Un registro en `pagos` por cada método realmente aplicado a la venta
+    // (no al vuelto): es lo que después suma el reporte de Caja Diaria.
+    const desglosePagos = [
+      ['efectivo', efectivoAplicado],
+      ['tarjeta', montos.tarjeta],
+      ['transferencia', montos.transferencia]
+    ].filter(([, monto]) => monto > MARGEN_ERROR_MONTO);
+
+    if (desglosePagos.length > 0) {
+      const valoresPagos = desglosePagos.map(([proveedor, monto]) => [pedidoId, proveedor, monto, 'aprobado']);
+      await connection.query(
+        'INSERT INTO pagos (pedido_id, proveedor, monto, estado) VALUES ?',
+        [valoresPagos]
+      );
+    }
+
     await connection.commit();
     transactionActive = false;
     connection.release();
 
-    res.status(201).json({ pedido_id: pedidoId, total });
+    res.status(201).json({ pedido_id: pedidoId, total, vuelto });
   } catch (err) {
     if (transactionActive) {
       await connection.rollback();

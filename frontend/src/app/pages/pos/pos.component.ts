@@ -8,6 +8,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { ProductosService, Producto } from '../../services/productos.service';
 import { OrderService } from '../../services/order.service';
 import { PedidoDetalleComponent } from '../pedidos/pedido-detalle/pedido-detalle.component';
+import { PagoMixtoDialogComponent, DesglosePago } from './pago-mixto-dialog/pago-mixto-dialog.component';
 
 interface ItemTicket {
   productoId: number;
@@ -382,6 +383,23 @@ export class PosComponent implements AfterViewInit {
   confirmarVenta() {
     if (this.ticket().length === 0 || this.isProcessing()) return;
 
+    const dialogRef = this.dialog.open(PagoMixtoDialogComponent, {
+      width: '440px',
+      data: { total: this.total() }
+    });
+
+    dialogRef.afterClosed().subscribe((desglosePago: DesglosePago | undefined) => {
+      // undefined = se canceló el modal (click afuera, botón Cancelar): el
+      // ticket queda intacto, el cajero puede seguir escaneando o reintentar.
+      if (!desglosePago) {
+        this.enfocarInput();
+        return;
+      }
+      this.registrarVenta(desglosePago);
+    });
+  }
+
+  private registrarVenta(desglosePago: DesglosePago) {
     this.isProcessing.set(true);
 
     const items = this.ticket().map((item) => ({
@@ -389,9 +407,12 @@ export class PosComponent implements AfterViewInit {
       cantidad: item.cantidad
     }));
 
-    this.orderService.crearVentaPos(items).subscribe({
+    this.orderService.crearVentaPos(items, desglosePago).subscribe({
       next: (res) => {
-        this.snackBar.open('Venta registrada correctamente', 'Cerrar', { duration: 3000 });
+        const mensaje = res.vuelto > 0
+          ? `Venta registrada. Vuelto: ${this.formatearMonto(res.vuelto)}`
+          : 'Venta registrada correctamente';
+        this.snackBar.open(mensaje, 'Cerrar', { duration: 4000 });
         this.ticket.set([]);
         this.ultimoEscaneado.set(null);
         this.isProcessing.set(false);
@@ -409,5 +430,9 @@ export class PosComponent implements AfterViewInit {
         this.enfocarInput();
       }
     });
+  }
+
+  private formatearMonto(monto: number): string {
+    return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(monto);
   }
 }

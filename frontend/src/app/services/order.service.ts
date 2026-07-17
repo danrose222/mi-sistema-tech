@@ -13,7 +13,13 @@ export interface PayerInput {
   phone?: { number: string };
 }
 
-export type MetodoPago = 'mercado_pago' | 'transferencia' | 'efectivo_local';
+export type MetodoPago = 'mercado_pago' | 'transferencia' | 'efectivo_local' | 'efectivo_pos';
+
+export interface DesglosePagoInput {
+  efectivo: number;
+  tarjeta: number;
+  transferencia: number;
+}
 
 export interface CrearPedidoInput {
   cliente_id?: number | null;
@@ -90,7 +96,10 @@ export class OrderService {
     return this.http.get<{ success: boolean; data: PedidoDetalle }>(`${this.apiUrl}/${id}`);
   }
 
-  crearVentaPos(items: PedidoItemInput[]): Observable<{ pedido_id: number; total: number }> {
-    return this.http.post<{ pedido_id: number; total: number }>(`${this.apiUrl}/pos`, { items });
+  crearVentaPos(items: PedidoItemInput[], desglosePago: DesglosePagoInput): Observable<{ pedido_id: number; total: number; vuelto: number }> {
+    return this.http.post<{ pedido_id: number; total: number; vuelto: number }>(`${this.apiUrl}/pos`, {
+      items,
+      desglose_pago: desglosePago
+    });
   }
 }
