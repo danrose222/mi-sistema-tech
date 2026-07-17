@@ -47,6 +47,7 @@ import { PedidoDetalleComponent } from './pedido-detalle/pedido-detalle.componen
             <mat-option value="pagado">Pagado</mat-option>
             <mat-option value="enviado">Enviado</mat-option>
             <mat-option value="cancelado">Cancelado</mat-option>
+            <mat-option value="reembolsado">Reembolsado</mat-option>
           </mat-select>
         </mat-form-field>
       </div>
@@ -210,6 +211,7 @@ import { PedidoDetalleComponent } from './pedido-detalle/pedido-detalle.componen
     .estado-pagado { background: #dcfce7; color: #16a34a; }
     .estado-cancelado { background: #fee2e2; color: #dc2626; }
     .estado-enviado { background: #dbeafe; color: #2563eb; }
+    .estado-reembolsado { background: #fee2e2; color: #991b1b; }
     .empty-state { text-align: center; padding: 48px 24px; }
     .empty-content { display: flex; flex-direction: column; align-items: center; gap: 12px; color: #64748b; }
     .empty-icon { font-size: 48px; height: 48px; width: 48px; color: #cbd5e1; }

@@ -28,6 +28,65 @@ exports.obtenerPedido = async (req, res) => {
   }
 };
 
+// Devolución/reembolso de un pedido ya pagado: repone el stock de sus items
+// y lo pasa a "reembolsado". No borra los registros de `pagos` (quedan como
+// historial de auditoría) ni inserta un movimiento negativo aparte; el
+// reporte de Caja Diaria resta las devoluciones del día al vuelo (ver
+// reportesController.obtenerCajaDiaria) usando reembolsado_en.
+exports.procesarDevolucion = async (req, res) => {
+  const pool = require('../config/database');
+  const pedidoId = req.params.id;
+
+  const connection = await pool.getConnection();
+  let transactionActive = false;
+
+  try {
+    await connection.beginTransaction();
+    transactionActive = true;
+
+    const [pedidos] = await connection.query('SELECT id, estado FROM pedidos WHERE id = ? FOR UPDATE', [pedidoId]);
+    if (pedidos.length === 0) {
+      throw Object.assign(new Error('El pedido especificado no existe'), { statusCode: 404 });
+    }
+    if (pedidos[0].estado !== 'pagado') {
+      throw Object.assign(
+        new Error(`Solo se pueden devolver pedidos pagados (estado actual: "${pedidos[0].estado}")`),
+        { statusCode: 409 }
+      );
+    }
+
+    const [items] = await connection.query('SELECT producto_id, cantidad FROM pedido_items WHERE pedido_id = ?', [pedidoId]);
+    for (const item of items) {
+      // FOR UPDATE por consistencia con el resto de las operaciones de stock
+      // (crearPedido, crearVentaPos, reservasCron) aunque acá siempre suma.
+      await connection.query('SELECT id FROM productos WHERE id = ? FOR UPDATE', [item.producto_id]);
+      await connection.query('UPDATE productos SET stock = stock + ? WHERE id = ?', [item.cantidad, item.producto_id]);
+    }
+
+    await connection.query(
+      "UPDATE pedidos SET estado = 'reembolsado', reembolsado_en = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+      [pedidoId]
+    );
+
+    await connection.commit();
+    transactionActive = false;
+    connection.release();
+
+    res.json({ success: true, data: { id: Number(pedidoId), estado: 'reembolsado' } });
+  } catch (err) {
+    if (transactionActive) {
+      await connection.rollback();
+    }
+    connection.release();
+
+    if (err.statusCode) {
+      return res.status(err.statusCode).json({ success: false, error: err.message });
+    }
+    console.error(err);
+    res.status(500).json({ success: false, error: 'Error al procesar la devolución' });
+  }
+};
+
 const METODOS_PAGO_VALIDOS = ['mercado_pago', 'transferencia', 'efectivo_local'];
 
 exports.crearPedido = async (req, res) => {

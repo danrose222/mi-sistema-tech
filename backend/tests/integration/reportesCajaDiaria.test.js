@@ -2,7 +2,7 @@ const request = require('supertest');
 const app = require('../../src/app');
 const pool = require('../../src/config/database');
 
-async function crearPedidoConPagos({ estado, total, pagos, fechaOffsetHoras = 0 }) {
+async function crearPedidoConPagos({ estado, total, pagos, fechaOffsetHoras = 0, reembolsadoOffsetHoras = null }) {
     const connection = await pool.getConnection();
     try {
         const [pedido] = await connection.query(
@@ -16,6 +16,13 @@ async function crearPedidoConPagos({ estado, total, pagos, fechaOffsetHoras = 0 
             await connection.query(
                 'INSERT INTO pagos (pedido_id, proveedor, monto, estado) VALUES (?, ?, ?, ?)',
                 [pedidoId, pago.proveedor, pago.monto, pago.estado || 'aprobado']
+            );
+        }
+
+        if (reembolsadoOffsetHoras !== null) {
+            await connection.query(
+                'UPDATE pedidos SET reembolsado_en = DATE_SUB(NOW(), INTERVAL ? HOUR) WHERE id = ?',
+                [reembolsadoOffsetHoras, pedidoId]
             );
         }
 
@@ -103,5 +110,59 @@ describe('Reporte de Caja Diaria', () => {
         expect(res.body.data.transferencia).toBe(0);
         expect(res.body.data.tarjetaMp).toBe(0);
         expect(res.body.data.cantidadVentas).toBe(0);
+    });
+
+    it('No debería restar dos veces una venta vendida y devuelta el mismo día', async () => {
+        // Vendida hoy y reembolsada hoy: el estado ya es "reembolsado", así que
+        // no cuenta como venta de hoy, y tampoco debe restarse aparte.
+        await crearPedidoConPagos({
+            estado: 'reembolsado',
+            total: 8000,
+            pagos: [{ proveedor: 'efectivo', monto: 8000 }],
+            fechaOffsetHoras: 2,
+            reembolsadoOffsetHoras: 1
+        });
+
+        // Una venta normal de hoy, para verificar que no se vea afectada
+        await crearPedidoConPagos({
+            estado: 'pagado',
+            total: 4000,
+            pagos: [{ proveedor: 'efectivo', monto: 4000 }]
+        });
+
+        const res = await request(app)
+            .get('/api/reportes/caja-diaria')
+            .set('Authorization', `Bearer ${tokenAdmin}`);
+
+        expect(res.statusCode).toBe(200);
+        expect(res.body.data.totalGeneral).toBe(4000);
+        expect(res.body.data.efectivo).toBe(4000);
+    });
+
+    it('Debería restar una devolución de hoy de una venta de un día anterior', async () => {
+        // Vendida ayer, devuelta hoy: el dinero salió de la caja hoy aunque la
+        // venta original no cuente en el total de ventas de hoy.
+        await crearPedidoConPagos({
+            estado: 'reembolsado',
+            total: 6000,
+            pagos: [{ proveedor: 'efectivo', monto: 6000 }],
+            fechaOffsetHoras: 30,
+            reembolsadoOffsetHoras: 1
+        });
+
+        await crearPedidoConPagos({
+            estado: 'pagado',
+            total: 10000,
+            pagos: [{ proveedor: 'efectivo', monto: 10000 }]
+        });
+
+        const res = await request(app)
+            .get('/api/reportes/caja-diaria')
+            .set('Authorization', `Bearer ${tokenAdmin}`);
+
+        expect(res.statusCode).toBe(200);
+        expect(res.body.data.totalGeneral).toBe(4000); // 10000 - 6000
+        expect(res.body.data.efectivo).toBe(4000);
+        expect(res.body.data.cantidadDevoluciones).toBe(1);
     });
 });

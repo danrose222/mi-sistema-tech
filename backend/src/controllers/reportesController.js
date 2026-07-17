@@ -13,17 +13,32 @@ function agruparProveedor(proveedor) {
 
 /**
  * Resume el efectivo/tarjeta-MP/transferencia que ingresó hoy por ventas
- * ya pagadas, para el cierre de caja del mostrador.
+ * pagadas, restando las devoluciones procesadas hoy, para el cierre de caja
+ * del mostrador.
+ *
+ * Una devolución de una venta del MISMO día no se resta dos veces: al pasar
+ * el pedido a "reembolsado" ya deja de contar como "venta de hoy" (el filtro
+ * de abajo exige estado = 'pagado'), así que solo hay que restar acá las
+ * devoluciones de ventas de OTRO día — dinero que salió de la caja hoy pero
+ * que nunca se sumó como ingreso de hoy.
  */
 exports.obtenerCajaDiaria = async (req, res) => {
   try {
-    const [[totales]] = await pool.query(
-      `SELECT COALESCE(SUM(total), 0) AS totalGeneral, COUNT(*) AS cantidadVentas
+    const [[ventasHoy]] = await pool.query(
+      `SELECT COALESCE(SUM(total), 0) AS total, COUNT(*) AS cantidad
        FROM pedidos
        WHERE estado = 'pagado' AND DATE(created_at) = CURDATE()`
     );
 
-    const [desglose] = await pool.query(
+    const [[devolucionesHoy]] = await pool.query(
+      `SELECT COALESCE(SUM(total), 0) AS total, COUNT(*) AS cantidad
+       FROM pedidos
+       WHERE estado = 'reembolsado'
+         AND DATE(reembolsado_en) = CURDATE()
+         AND DATE(created_at) <> CURDATE()`
+    );
+
+    const [ingresosPorProveedor] = await pool.query(
       `SELECT pg.proveedor, COALESCE(SUM(pg.monto), 0) AS total
        FROM pagos pg
        JOIN pedidos p ON p.id = pg.pedido_id
@@ -31,20 +46,34 @@ exports.obtenerCajaDiaria = async (req, res) => {
        GROUP BY pg.proveedor`
     );
 
+    const [devolucionesPorProveedor] = await pool.query(
+      `SELECT pg.proveedor, COALESCE(SUM(pg.monto), 0) AS total
+       FROM pagos pg
+       JOIN pedidos p ON p.id = pg.pedido_id
+       WHERE p.estado = 'reembolsado'
+         AND DATE(p.reembolsado_en) = CURDATE()
+         AND DATE(p.created_at) <> CURDATE()
+         AND pg.estado = 'aprobado'
+       GROUP BY pg.proveedor`
+    );
+
     const resumen = { efectivo: 0, transferencia: 0, tarjetaMp: 0 };
-    for (const fila of desglose) {
+    for (const fila of ingresosPorProveedor) {
       const bucket = agruparProveedor(fila.proveedor);
-      if (bucket) {
-        resumen[bucket] += Number(fila.total);
-      }
+      if (bucket) resumen[bucket] += Number(fila.total);
+    }
+    for (const fila of devolucionesPorProveedor) {
+      const bucket = agruparProveedor(fila.proveedor);
+      if (bucket) resumen[bucket] -= Number(fila.total);
     }
 
     res.json({
       success: true,
       data: {
         fecha: new Date().toISOString().split('T')[0],
-        cantidadVentas: totales.cantidadVentas,
-        totalGeneral: Number(totales.totalGeneral),
+        cantidadVentas: ventasHoy.cantidad,
+        cantidadDevoluciones: devolucionesHoy.cantidad,
+        totalGeneral: Number(ventasHoy.total) - Number(devolucionesHoy.total),
         efectivo: resumen.efectivo,
         transferencia: resumen.transferencia,
         tarjetaMp: resumen.tarjetaMp

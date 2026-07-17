@@ -1,6 +1,6 @@
 import { Component, inject, OnInit, OnDestroy, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
+import { MatDialog, MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -9,6 +9,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { OrderService, PedidoDetalle } from '../../../services/order.service';
 import { WhatsappService } from '../../../services/whatsapp.service';
+import { ConfirmarDevolucionDialogComponent } from './confirmar-devolucion-dialog/confirmar-devolucion-dialog.component';
 
 @Component({
   selector: 'app-pedido-detalle',
@@ -118,6 +119,17 @@ import { WhatsappService } from '../../../services/whatsapp.service';
         <mat-icon>chat</mat-icon>
         {{ isSendingReminder() ? 'Enviando...' : 'Enviar recordatorio WhatsApp' }}
       </button>
+      @if (pedido()?.estado === 'pagado') {
+        <button
+          mat-stroked-button
+          color="warn"
+          [disabled]="isProcesandoDevolucion()"
+          (click)="procesarDevolucion()"
+          matTooltip="Devuelve los productos al stock y marca el pedido como reembolsado">
+          <mat-icon>assignment_return</mat-icon>
+          {{ isProcesandoDevolucion() ? 'Procesando...' : 'Procesar Devolución' }}
+        </button>
+      }
       <button mat-button mat-dialog-close>Cerrar</button>
     </mat-dialog-actions>
   `,
@@ -142,6 +154,7 @@ import { WhatsappService } from '../../../services/whatsapp.service';
     .estado-pagado { background: #dcfce7; color: #16a34a; }
     .estado-cancelado { background: #fee2e2; color: #dc2626; }
     .estado-enviado { background: #dbeafe; color: #2563eb; }
+    .estado-reembolsado { background: #fee2e2; color: #991b1b; }
     .items-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
     .items-table th { text-align: left; color: #64748b; font-weight: 500; padding: 8px 4px; border-bottom: 1px solid #e2e8f0; }
     .items-table td { padding: 8px 4px; border-bottom: 1px solid #f1f5f9; color: #111; }
@@ -218,10 +231,12 @@ export class PedidoDetalleComponent implements OnInit, OnDestroy {
   orderService = inject(OrderService);
   whatsappService = inject(WhatsappService);
   snackBar = inject(MatSnackBar);
+  dialog = inject(MatDialog);
 
   pedido = signal<PedidoDetalle | null>(null);
   isLoading = signal(true);
   isSendingReminder = signal(false);
+  isProcesandoDevolucion = signal(false);
 
   private static readonly METODOS_PAGO_LABEL: Record<string, string> = {
     mercado_pago: 'Mercado Pago',
@@ -290,6 +305,32 @@ export class PedidoDetalleComponent implements OnInit, OnDestroy {
         console.error(err);
         this.isSendingReminder.set(false);
       }
+    });
+  }
+
+  procesarDevolucion() {
+    const dialogRef = this.dialog.open(ConfirmarDevolucionDialogComponent, { width: '440px' });
+
+    dialogRef.afterClosed().subscribe((confirmado: boolean | undefined) => {
+      if (!confirmado || this.isProcesandoDevolucion()) return;
+
+      this.isProcesandoDevolucion.set(true);
+      this.orderService.procesarDevolucion(this.data.pedidoId).subscribe({
+        next: () => {
+          // Se actualiza el signal local en vez de refetchear: el backend ya
+          // confirmó el cambio, y así el estado visual (badge, botones) se
+          // refleja al instante sin una segunda ida y vuelta al servidor.
+          this.pedido.update((actual) => actual ? { ...actual, estado: 'reembolsado' } : actual);
+          this.isProcesandoDevolucion.set(false);
+          this.snackBar.open('Devolución procesada: stock repuesto y pedido marcado como reembolsado', 'Cerrar', { duration: 4000 });
+        },
+        error: (err) => {
+          this.isProcesandoDevolucion.set(false);
+          const mensaje = err?.error?.error || 'No se pudo procesar la devolución';
+          this.snackBar.open(mensaje, 'Cerrar', { duration: 5000 });
+          console.error(err);
+        }
+      });
     });
   }
 }

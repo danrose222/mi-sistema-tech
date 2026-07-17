@@ -35,7 +35,7 @@ export interface CrearPedidoResponse {
   preference_id: string | null;
 }
 
-export type EstadoPedido = 'pendiente' | 'pagado' | 'cancelado' | 'enviado';
+export type EstadoPedido = 'pendiente' | 'pagado' | 'cancelado' | 'enviado' | 'reembolsado';
 
 export interface Pedido {
   id: number;
@@ -94,6 +94,10 @@ export class OrderService {
 
   obtener(id: number): Observable<{ success: boolean; data: PedidoDetalle }> {
     return this.http.get<{ success: boolean; data: PedidoDetalle }>(`${this.apiUrl}/${id}`);
+  }
+
+  procesarDevolucion(id: number): Observable<{ success: boolean; data: { id: number; estado: EstadoPedido } }> {
+    return this.http.post<{ success: boolean; data: { id: number; estado: EstadoPedido } }>(`${this.apiUrl}/${id}/devolucion`, {});
   }
 
   crearVentaPos(items: PedidoItemInput[], desglosePago: DesglosePagoInput): Observable<{ pedido_id: number; total: number; vuelto: number }> {
