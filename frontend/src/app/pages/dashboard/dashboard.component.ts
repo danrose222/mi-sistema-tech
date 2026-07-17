@@ -7,6 +7,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { catchError, map, of } from 'rxjs';
 
 import { DashboardService } from '../../services/dashboard.service';
+import { ReportesService, CajaDiaria } from '../../services/reportes.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -105,6 +106,55 @@ import { DashboardService } from '../../services/dashboard.service';
                 }
               </div>
             </div>
+          </div>
+        }
+
+        <!-- Widget "Caja de Hoy": lo que ingresó por venta ya pagada en el día -->
+        @if (cajaDiaria(); as caja) {
+          <div class="caja-card">
+            <div class="caja-header">
+              <div class="kpi-icon success"><mat-icon>point_of_sale</mat-icon></div>
+              <div class="caja-header-body">
+                <span class="caja-total">{{ caja.totalGeneral | currency:'ARS':'symbol':'1.0-0' }}</span>
+                <span class="caja-label">Caja de hoy · {{ caja.cantidadVentas }} venta(s)</span>
+              </div>
+            </div>
+
+            @if (caja.totalGeneral > 0) {
+              <div class="caja-bar">
+                <div class="caja-bar-segment efectivo" [style.width.%]="pctEfectivo(caja)"></div>
+                <div class="caja-bar-segment digital" [style.width.%]="pctDigital(caja)"></div>
+              </div>
+            }
+
+            <div class="caja-desglose">
+              <div class="caja-item">
+                <mat-icon class="icono-efectivo">payments</mat-icon>
+                <div class="caja-item-body">
+                  <span class="caja-item-label">Efectivo</span>
+                  <span class="caja-item-valor">{{ caja.efectivo | currency:'ARS':'symbol':'1.0-0' }}</span>
+                </div>
+              </div>
+              <div class="caja-item">
+                <mat-icon class="icono-digital">credit_card</mat-icon>
+                <div class="caja-item-body">
+                  <span class="caja-item-label">Tarjeta / MercadoPago</span>
+                  <span class="caja-item-valor">{{ caja.tarjetaMp | currency:'ARS':'symbol':'1.0-0' }}</span>
+                </div>
+              </div>
+              <div class="caja-item">
+                <mat-icon class="icono-digital">account_balance</mat-icon>
+                <div class="caja-item-body">
+                  <span class="caja-item-label">Transferencia</span>
+                  <span class="caja-item-valor">{{ caja.transferencia | currency:'ARS':'symbol':'1.0-0' }}</span>
+                </div>
+              </div>
+            </div>
+
+            <p class="caja-hint">
+              <mat-icon>info</mat-icon>
+              "Efectivo" es lo que debería haber físicamente en el cajón hoy; el resto ingresó por medios digitales.
+            </p>
           </div>
         }
       } @else {
@@ -267,11 +317,76 @@ import { DashboardService } from '../../services/dashboard.service';
     }
     .ventas-empty { color: var(--ash); font-size: 0.9rem; margin: 0; }
 
+    /* Widget "Caja de Hoy" */
+    .caja-card {
+      background: var(--slate);
+      border: 1px solid var(--border-dim);
+      border-radius: var(--radius-md);
+      padding: 24px;
+      margin-top: 20px;
+    }
+    .caja-header { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
+    .caja-header-body { display: flex; flex-direction: column; gap: 4px; }
+    .caja-total {
+      font-family: var(--font-display);
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--white);
+      line-height: 1.1;
+    }
+    .caja-label { font-size: 0.9rem; color: var(--ash); }
+
+    .caja-bar {
+      display: flex;
+      height: 8px;
+      border-radius: 100px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.06);
+      margin-bottom: 20px;
+    }
+    .caja-bar-segment { height: 100%; transition: width 0.3s ease; }
+    .caja-bar-segment.efectivo { background: var(--success); }
+    .caja-bar-segment.digital { background: var(--signal); }
+
+    .caja-desglose {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .caja-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-dim);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+    }
+    .caja-item mat-icon { flex-shrink: 0; font-size: 22px; width: 22px; height: 22px; }
+    .caja-item .icono-efectivo { color: var(--success); }
+    .caja-item .icono-digital { color: var(--signal); }
+    .caja-item-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .caja-item-label { font-size: 0.78rem; color: var(--ash); }
+    .caja-item-valor { font-size: 1.1rem; font-weight: 700; color: var(--white); }
+
+    .caja-hint {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      margin: 0;
+      color: var(--ash);
+      font-size: 0.8rem;
+      line-height: 1.5;
+    }
+    .caja-hint mat-icon { font-size: 16px; width: 16px; height: 16px; flex-shrink: 0; margin-top: 2px; }
+
     .error-msg { color: var(--danger); }
   `]
 })
 export class DashboardComponent {
   private dashboardService = inject(DashboardService);
+  private reportesService = inject(ReportesService);
 
   // `toSignal` en vez de subscribe()+signal.set(): con withFetch(), la respuesta
   // HTTP puede resolver fuera de la zona de Angular en ciertos timings, así que
@@ -305,5 +420,24 @@ export class DashboardComponent {
 
   toggleDetalleVentas() {
     this.mostrarDetalleVentas.update(v => !v);
+  }
+
+  cajaDiaria = toSignal(
+    this.reportesService.obtenerCajaDiaria().pipe(
+      map(res => res.data),
+      catchError(err => {
+        console.error('Error al cargar la caja diaria:', err);
+        return of(null);
+      })
+    )
+  );
+
+  pctEfectivo(caja: CajaDiaria): number {
+    if (!caja.totalGeneral) return 0;
+    return (caja.efectivo / caja.totalGeneral) * 100;
+  }
+
+  pctDigital(caja: CajaDiaria): number {
+    return 100 - this.pctEfectivo(caja);
   }
 }

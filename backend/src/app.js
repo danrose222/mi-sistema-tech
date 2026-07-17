@@ -77,6 +77,9 @@ app.use('/api/cuotas', cuotasRoutes);
 const dashboardRoutes = require('./routes/dashboardRoutes');
 app.use('/api/dashboard', dashboardRoutes);
 
+const reportesRoutes = require('./routes/reportesRoutes');
+app.use('/api/reportes', reportesRoutes);
+
 const publicoRoutes = require('./routes/publicoRoutes');
 app.use('/api/publico', publicoRoutes);
 
