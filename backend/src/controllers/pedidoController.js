@@ -123,51 +123,61 @@ exports.crearPedido = async (req, res) => {
 };
 
 exports.webhookPago = async (req, res) => {
+  let data;
   try {
-    const { topic, data } = mercadopagoService.validarWebhook(req.body, req.headers, req.query);
-    const paymentId = data.id || (data.data && data.data.id);
-    if (!paymentId) {
-      return res.status(400).json({ error: 'Webhook inválido: payment id faltante' });
-    }
-
-    // Comprobar idempotencia: ¿Ya procesamos este pago?
-    const pagoExistente = await pedidoModel.obtenerPagoPorProveedorId(paymentId);
-    if (pagoExistente) {
-      return res.json({ received: true, message: 'Pago ya procesado (Idempotencia)' });
-    }
-
-    const payment = await mercadopagoService.obtenerPago(paymentId);
-    const external_reference = payment.external_reference || (payment.order && payment.order.external_reference);
-    const status = payment.status;
-    const transactionAmount = payment.transaction_amount || 0;
-
-    const statusMap = {
-      approved: 'aprobado',
-      rejected: 'rechazado',
-      pending: 'pendiente',
-      in_process: 'pendiente'
-    };
-    const mappedStatus = statusMap[status] || 'pendiente';
-
-    await pedidoModel.crearPago({
-      pedido_id: external_reference ? Number(external_reference) : null,
-      proveedor: 'mercadopago',
-      proveedor_payment_id: payment.id,
-      monto: transactionAmount,
-      estado: mappedStatus,
-      raw_payload: payment
-    });
-
-    if (external_reference && status === 'approved') {
-      await pedidoModel.actualizarPedidoEstado(Number(external_reference), 'pagado');
-    }
-
-    res.json({ received: true });
+    ({ data } = mercadopagoService.validarWebhook(req.body, req.headers, req.query));
   } catch (err) {
     if (err.message === 'Firma inválida') {
-        return res.status(400).json({ error: 'Firma inválida' });
+      return res.status(400).json({ error: 'Firma inválida' });
     }
-    console.error(err);
-    res.status(500).json({ error: 'Error al procesar webhook de pago' });
+    console.error('[Webhook MP] Error al validar la notificación:', err);
+    return res.status(400).json({ error: 'Webhook inválido' });
   }
+
+  const paymentId = data.id || (data.data && data.data.id);
+  if (!paymentId) {
+    return res.status(400).json({ error: 'Webhook inválido: payment id faltante' });
+  }
+
+  // Responder 200 ya mismo: MercadoPago reintenta la notificación si no recibe
+  // respuesta en pocos segundos, y esperar la consulta a su API + las escrituras
+  // en la base puede superar ese margen y generar reintentos/duplicados. El
+  // procesamiento real (idempotencia, consulta de pago, guardado) sigue abajo,
+  // desacoplado de la respuesta HTTP.
+  res.status(200).json({ received: true });
+
+  procesarPagoWebhook(paymentId).catch((err) => {
+    console.error('[Webhook MP] Error al procesar el pago en segundo plano:', err);
+  });
 };
+
+async function procesarPagoWebhook(paymentId) {
+  const pagoExistente = await pedidoModel.obtenerPagoPorProveedorId(paymentId);
+  if (pagoExistente) return;
+
+  const payment = await mercadopagoService.obtenerPago(paymentId);
+  const external_reference = payment.external_reference || (payment.order && payment.order.external_reference);
+  const status = payment.status;
+  const transactionAmount = payment.transaction_amount || 0;
+
+  const statusMap = {
+    approved: 'aprobado',
+    rejected: 'rechazado',
+    pending: 'pendiente',
+    in_process: 'pendiente'
+  };
+  const mappedStatus = statusMap[status] || 'pendiente';
+
+  await pedidoModel.crearPago({
+    pedido_id: external_reference ? Number(external_reference) : null,
+    proveedor: 'mercadopago',
+    proveedor_payment_id: payment.id,
+    monto: transactionAmount,
+    estado: mappedStatus,
+    raw_payload: payment
+  });
+
+  if (external_reference && status === 'approved') {
+    await pedidoModel.actualizarPedidoEstado(Number(external_reference), 'pagado');
+  }
+}

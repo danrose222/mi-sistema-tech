@@ -12,6 +12,18 @@ function generarFirmaWebhook(dataId) {
   return `ts=${ts},v1=${hash}`;
 }
 
+// El webhook responde 200 antes de terminar de procesar en segundo plano (ver
+// pedidoController.webhookPago), así que las aserciones contra la base deben
+// esperar a que esa escritura asíncrona se complete en vez de asumir que ya
+// ocurrió apenas resuelve el POST.
+async function esperarHasta(condicionAsync, { intentos = 40, esperaMs = 25 } = {}) {
+  for (let i = 0; i < intentos; i++) {
+    if (await condicionAsync()) return true;
+    await new Promise((resolve) => setTimeout(resolve, esperaMs));
+  }
+  return false;
+}
+
 // Mockear mercadopagoService
 jest.mock('../../src/services/mercadopagoService', () => {
   const original = jest.requireActual('../../src/services/mercadopagoService');
@@ -68,8 +80,13 @@ describe('Módulo de Pagos (Webhook) Integración', () => {
             expect(res.statusCode).toBe(200);
             expect(res.body.received).toBe(true);
 
-            // Verificar base de datos (pagos y estado de pedido)
+            // Verificar base de datos (pagos y estado de pedido) una vez que el
+            // procesamiento en segundo plano terminó
             const connection = await pool.getConnection();
+            await esperarHasta(async () => {
+                const [pagos] = await connection.query('SELECT * FROM pagos WHERE proveedor_payment_id = ?', ['pay_999']);
+                return pagos.length > 0;
+            });
             const [pedidos] = await connection.query('SELECT estado FROM pedidos WHERE id = ?', [pedidoId]);
             const [pagos] = await connection.query('SELECT * FROM pagos WHERE proveedor_payment_id = ?', ['pay_999']);
             connection.release();
@@ -111,7 +128,18 @@ describe('Módulo de Pagos (Webhook) Integración', () => {
 
             expect(res1.statusCode).toBe(200);
 
-            // Segundo webhook idéntico
+            // Esperar a que el primer webhook termine de procesarse en segundo
+            // plano antes de mandar el segundo, para no correr una carrera
+            // contra su propia inserción en pagos
+            const connection = await pool.getConnection();
+            await esperarHasta(async () => {
+                const [pagos] = await connection.query('SELECT * FROM pagos WHERE proveedor_payment_id = ?', ['pay_999']);
+                return pagos.length > 0;
+            });
+
+            // Segundo webhook idéntico: la respuesta HTTP sigue siendo 200 de
+            // inmediato (ya no espera la verificación de idempotencia), pero
+            // esa verificación evita que se cree un segundo registro en pagos
             const res2 = await request(app)
                 .post('/api/pedidos/webhook')
                 .set('x-mercadopago-topic', 'payment')
@@ -119,10 +147,12 @@ describe('Módulo de Pagos (Webhook) Integración', () => {
                 .send(data);
 
             expect(res2.statusCode).toBe(200);
-            expect(res2.body.message).toMatch(/Idempotencia/i);
+            expect(res2.body.received).toBe(true);
 
-            // Validar que solo se creó 1 pago en BD
-            const connection = await pool.getConnection();
+            // Pequeño respiro para que, si el segundo webhook llegara a duplicar
+            // el pago, la escritura ya haya ocurrido antes de esta verificación
+            await new Promise((resolve) => setTimeout(resolve, 100));
+
             const [pagos] = await connection.query('SELECT * FROM pagos WHERE proveedor_payment_id = ?', ['pay_999']);
             connection.release();
 
