@@ -89,4 +89,8 @@ export class OrderService {
   obtener(id: number): Observable<{ success: boolean; data: PedidoDetalle }> {
     return this.http.get<{ success: boolean; data: PedidoDetalle }>(`${this.apiUrl}/${id}`);
   }
+
+  crearVentaPos(items: PedidoItemInput[]): Observable<{ pedido_id: number; total: number }> {
+    return this.http.post<{ pedido_id: number; total: number }>(`${this.apiUrl}/pos`, { items });
+  }
 }

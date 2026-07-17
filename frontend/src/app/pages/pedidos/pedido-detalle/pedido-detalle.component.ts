@@ -262,6 +262,13 @@ export class PedidoDetalleComponent implements OnInit, OnDestroy {
       next: (res) => {
         this.pedido.set(res.data);
         this.isLoading.set(false);
+
+        if (this.data.autoprint) {
+          // setTimeout para dejar que Angular pinte el comprobante antes de
+          // llamar a print(): si se llama en el mismo tick, el motor de
+          // impresión puede capturar el spinner de carga en vez del detalle.
+          setTimeout(() => this.imprimirComprobante(), 0);
+        }
       },
       error: (err) => {
         console.error(err);

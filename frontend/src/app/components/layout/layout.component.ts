@@ -36,6 +36,9 @@ import { AuthService } from '../../services/auth.service';
           <a routerLink="/admin/presupuestos" routerLinkActive="active" class="nav-item" (click)="closeSidebar()">
             <span class="nav-label">Presupuestos</span>
           </a>
+          <a routerLink="/admin/caja" routerLinkActive="active" class="nav-item" (click)="closeSidebar()">
+            <span class="nav-label">Caja</span>
+          </a>
           <a routerLink="/admin/creditos" routerLinkActive="active" class="nav-item" (click)="closeSidebar()">
             <span class="nav-label">Créditos</span>
           </a>

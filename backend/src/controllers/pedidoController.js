@@ -144,6 +144,77 @@ exports.crearPedido = async (req, res) => {
   }
 };
 
+// Venta de mostrador (POS): a diferencia de crearPedido, la ruta exige
+// autenticación (ver pedidoRoutes.js) y el pago ya se cobró en efectivo en
+// el momento, así que el pedido nace directamente en estado "pagado" — no
+// pasa por 'pendiente' ni por el cron de liberación de reservas de 48hs.
+exports.crearVentaPos = async (req, res) => {
+  const pool = require('../config/database');
+  const { items } = req.body;
+
+  if (!items || !Array.isArray(items) || items.length === 0) {
+    return res.status(400).json({ error: 'La venta debe contener al menos un item' });
+  }
+  for (const item of items) {
+    if (!Number.isInteger(item.producto_id) || !Number.isInteger(item.cantidad) || item.cantidad <= 0) {
+      return res.status(400).json({ error: 'Cada item debe tener producto_id y cantidad (entero positivo) válidos' });
+    }
+  }
+
+  const connection = await pool.getConnection();
+  let transactionActive = false;
+
+  try {
+    await connection.beginTransaction();
+    transactionActive = true;
+
+    const itemsVerificados = [];
+    for (const item of items) {
+      const [rows] = await connection.query('SELECT id, nombre, precio, stock FROM productos WHERE id = ? FOR UPDATE', [item.producto_id]);
+      if (rows.length === 0) {
+        throw Object.assign(new Error(`El producto ${item.producto_id} no existe`), { statusCode: 400 });
+      }
+      const producto = rows[0];
+      if (producto.stock < item.cantidad) {
+        throw Object.assign(new Error(`El producto ${item.producto_id} no tiene stock suficiente`), { statusCode: 400 });
+      }
+      await connection.query('UPDATE productos SET stock = stock - ? WHERE id = ?', [item.cantidad, item.producto_id]);
+      itemsVerificados.push({
+        producto_id: producto.id,
+        cantidad: item.cantidad,
+        precio_unitario: Number(producto.precio)
+      });
+    }
+
+    const total = itemsVerificados.reduce((sum, item) => sum + item.precio_unitario * item.cantidad, 0);
+    const [result] = await connection.query(
+      "INSERT INTO pedidos (cliente_id, total, metodo_pago, estado) VALUES (NULL, ?, 'efectivo_pos', 'pagado')",
+      [total]
+    );
+    const pedidoId = result.insertId;
+
+    const values = itemsVerificados.map((item) => [pedidoId, item.producto_id, item.cantidad, item.precio_unitario]);
+    await connection.query('INSERT INTO pedido_items (pedido_id, producto_id, cantidad, precio_unitario) VALUES ?', [values]);
+
+    await connection.commit();
+    transactionActive = false;
+    connection.release();
+
+    res.status(201).json({ pedido_id: pedidoId, total });
+  } catch (err) {
+    if (transactionActive) {
+      await connection.rollback();
+    }
+    connection.release();
+
+    if (err.statusCode) {
+      return res.status(err.statusCode).json({ error: err.message });
+    }
+    console.error(err);
+    res.status(500).json({ error: 'Error al registrar la venta' });
+  }
+};
+
 exports.webhookPago = async (req, res) => {
   let topic, data;
   try {

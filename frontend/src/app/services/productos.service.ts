@@ -43,6 +43,10 @@ export class ProductosService {
     return this.http.get<{ success: boolean; data: Producto }>(`${this.apiUrl}/${id}`);
   }
 
+  buscarPorBarcode(barcode: string): Observable<{ success: boolean; data: Producto }> {
+    return this.http.get<{ success: boolean; data: Producto }>(`${this.apiUrl}/barcode/${encodeURIComponent(barcode)}`);
+  }
+
   // Si hay imagen nueva el form arma un FormData (multipart); si no, sigue
   // mandando el objeto plano de siempre. HttpClient detecta FormData y deja
   // que el browser setee el Content-Type con el boundary correcto: no hay

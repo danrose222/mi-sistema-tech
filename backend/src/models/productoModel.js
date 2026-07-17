@@ -111,7 +111,10 @@ exports.obtenerProductoPorId = async (id) => {
 };
 
 exports.obtenerProductoPorBarcode = async (barcode) => {
-  const [rows] = await pool.query('SELECT id, nombre, stock FROM productos WHERE barcode = ? LIMIT 1', [barcode]);
+  const [rows] = await pool.query(
+    'SELECT id, nombre, sku, barcode, precio, stock, activo FROM productos WHERE barcode = ? LIMIT 1',
+    [barcode]
+  );
   return rows[0];
 };
 
