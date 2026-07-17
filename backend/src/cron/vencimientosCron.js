@@ -5,6 +5,11 @@ const whatsappService = require('../services/whatsappService');
 const MINUTOS = process.env.CRON_VENCIMIENTOS_MINUTOS || '0';
 const HORAS = process.env.CRON_VENCIMIENTOS_HORAS || '8';
 
+// Plantilla de cobranza para pedidos vencidos aprobada en Meta Business Manager.
+// Body con 3 variables en orden: {{1}} nombre del cliente, {{2}} monto, {{3}} link de pago.
+const NOMBRE_PLANTILLA_PEDIDO = process.env.WHATSAPP_TEMPLATE_PEDIDO_VENCIDO || 'recordatorio_pedido_vencido';
+const IDIOMA_PLANTILLA = process.env.WHATSAPP_TEMPLATE_LANG || 'es_AR';
+
 const enviarRecordatoriosVencidos = async () => {
   try {
     const pedidos = await alertaService.obtenerPedidosVencidos();
@@ -15,8 +20,12 @@ const enviarRecordatoriosVencidos = async () => {
       const telefono = pedido.cliente_telefono;
       if (!telefono) continue;
 
-      const mensaje = `Hola ${pedido.cliente_nombre || 'cliente'}, tu pago de $${pedido.total.toFixed(2)} está vencido. Completa tu pago aquí: ${pedido.pago_link}`;
-      await whatsappService.enviarMensaje({ telefono, mensaje });
+      await whatsappService.enviarPlantilla({
+        telefono,
+        nombrePlantilla: NOMBRE_PLANTILLA_PEDIDO,
+        idioma: IDIOMA_PLANTILLA,
+        parametros: [pedido.cliente_nombre || 'cliente', pedido.total.toFixed(2), pedido.pago_link || '']
+      });
       await alertaService.marcarAlertaEnviada(pedido.id);
     }
   } catch (error) {
