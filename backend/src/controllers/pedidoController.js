@@ -89,6 +89,33 @@ exports.procesarDevolucion = async (req, res) => {
 
 const METODOS_PAGO_VALIDOS = ['mercado_pago', 'transferencia', 'efectivo_local'];
 
+// CRM unificado: si la compra web trae DNI, la venta se asocia siempre a un
+// cliente de la base general (buscándolo o creándolo), en vez de quedar
+// "suelta" con solo cliente_email. Se hace con SELECT + INSERT (no INSERT
+// ... ON DUPLICATE KEY) para no pisar silenciosamente nombre/teléfono/email
+// de un cliente ya existente con los datos que puso en este checkout puntual.
+async function buscarOCrearClientePorDni(connection, { dni, nombre, telefono, email }) {
+  const [existente] = await connection.query('SELECT id FROM clientes WHERE dni = ?', [dni]);
+  if (existente.length > 0) {
+    return existente[0].id;
+  }
+
+  try {
+    const [insertado] = await connection.query(
+      'INSERT INTO clientes (nombre, telefono, email, dni) VALUES (?, ?, ?, ?)',
+      [nombre || 'Cliente Web', telefono || null, email || null, dni]
+    );
+    return insertado.insertId;
+  } catch (err) {
+    // Condición de carrera: dos checkouts simultáneos con el mismo DNI.
+    if (err.code === 'ER_DUP_ENTRY') {
+      const [ganador] = await connection.query('SELECT id FROM clientes WHERE dni = ?', [dni]);
+      if (ganador.length > 0) return ganador[0].id;
+    }
+    throw err;
+  }
+}
+
 exports.crearPedido = async (req, res) => {
   const pool = require('../config/database');
   const { cliente_id, items, payer } = req.body;
@@ -133,11 +160,26 @@ exports.crearPedido = async (req, res) => {
       });
     }
 
+    // 1.5 CRM unificado: si no vino un cliente_id ya resuelto (ej. cliente logueado)
+    // pero sí un DNI, se busca/crea el cliente en la base general del local.
+    let clienteIdFinal = cliente_id || null;
+    if (!clienteIdFinal && payer?.dni) {
+      const dni = String(payer.dni).trim();
+      if (dni) {
+        clienteIdFinal = await buscarOCrearClientePorDni(connection, {
+          dni,
+          nombre: payer.name,
+          telefono: payer.phone?.number,
+          email: payer.email
+        });
+      }
+    }
+
     // 2. Crear pedido con el total calculado a partir del precio verificado en BD
     const total = itemsVerificados.reduce((sum, item) => sum + item.precio_unitario * item.cantidad, 0);
     const [result] = await connection.query(
       'INSERT INTO pedidos (cliente_id, total, metodo_pago, cliente_email) VALUES (?, ?, ?, ?)',
-      [cliente_id || null, total, metodo_pago, payer?.email || null]
+      [clienteIdFinal, total, metodo_pago, payer?.email || null]
     );
     const pedidoId = result.insertId;
 

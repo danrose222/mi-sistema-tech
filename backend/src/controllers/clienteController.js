@@ -15,6 +15,38 @@ const clienteController = {
         }
     },
 
+    // Buscador rápido por DNI (coincidencia exacta): cruza con Créditos para
+    // devolver un estado_crediticio calculado, usado por el widget de alerta
+    // de morosidad en el navbar del panel admin.
+    buscarPorDni: async (req, res) => {
+        try {
+            const dni = (req.query.dni || '').trim();
+            if (!dni) {
+                return res.status(400).json({ success: false, error: 'Debe indicar un DNI para buscar' });
+            }
+
+            const cliente = await Cliente.obtenerPorDni(dni);
+            if (!cliente) {
+                return res.status(404).json({ success: false, error: 'No se encontró ningún cliente con ese DNI' });
+            }
+
+            const pool = require('../config/database');
+            const [creditos] = await pool.query('SELECT estado FROM creditos WHERE cliente_id = ?', [cliente.id]);
+
+            let estado_crediticio = 'sin_historial';
+            if (creditos.some((c) => c.estado === 'moroso')) {
+                estado_crediticio = 'moroso';
+            } else if (creditos.length > 0) {
+                estado_crediticio = 'al_dia';
+            }
+
+            res.json({ success: true, data: { ...cliente, estado_crediticio } });
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ success: false, error: 'Hubo un error al buscar el cliente por DNI' });
+        }
+    },
+
     obtenerCliente: async (req, res) => {
         try {
             const cliente = await Cliente.obtenerPorId(req.params.id);

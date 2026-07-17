@@ -82,6 +82,12 @@ interface PedidoConfirmado {
                 </mat-form-field>
 
                 <mat-form-field appearance="outline">
+                  <mat-label>DNI</mat-label>
+                  <input matInput formControlName="dni" inputmode="numeric" maxlength="8" placeholder="Sin puntos">
+                  <mat-error>DNI válido requerido (7 u 8 dígitos)</mat-error>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
                   <mat-label>Email</mat-label>
                   <input matInput type="email" formControlName="email">
                   <mat-error>Email válido requerido</mat-error>
@@ -490,6 +496,7 @@ export class CheckoutComponent {
 
   checkoutForm = this.fb.group({
     nombre: ['', Validators.required],
+    dni: ['', [Validators.required, Validators.pattern(/^\d{7,8}$/)]],
     email: ['', [Validators.required, Validators.email]],
     telefono: ['', Validators.required],
     direccion: ['', Validators.required],
@@ -507,7 +514,7 @@ export class CheckoutComponent {
 
     this.isProcessing.set(true);
 
-    const { nombre, email, telefono } = this.checkoutForm.value;
+    const { nombre, dni, email, telefono } = this.checkoutForm.value;
     const pedido = {
       items: this.carrito.items().map(item => ({
         producto_id: item.id,
@@ -516,7 +523,8 @@ export class CheckoutComponent {
       payer: {
         email: email!,
         name: nombre!,
-        phone: { number: telefono! }
+        phone: { number: telefono! },
+        dni: dni!
       },
       metodo_pago: this.metodoPago()
     };

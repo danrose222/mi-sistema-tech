@@ -32,6 +32,14 @@ import { ClientesService } from '../../../services/clientes.service';
         </mat-form-field>
 
         <mat-form-field appearance="outline" class="full-width">
+          <mat-label>DNI</mat-label>
+          <input matInput formControlName="dni" inputmode="numeric" maxlength="8" placeholder="Sin puntos">
+          @if (form.get('dni')?.hasError('pattern')) {
+            <mat-error>DNI inválido (7 u 8 dígitos)</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
           <mat-label>Email</mat-label>
           <input matInput type="email" formControlName="email" placeholder="ejemplo@email.com">
           @if (form.get('email')?.hasError('email')) {
@@ -95,6 +103,7 @@ export class ClienteFormComponent {
 
   form: FormGroup = this.fb.group({
     nombre: [this.data?.cliente?.nombre || '', Validators.required],
+    dni: [this.data?.cliente?.dni || '', [Validators.pattern(/^\d{7,8}$/)]],
     email: [this.data?.cliente?.email || '', [Validators.email]],
     telefono: [this.data?.cliente?.telefono || '', [Validators.required, Validators.pattern(this.phonePattern)]],
     direccion: [this.data?.cliente?.direccion || ''],

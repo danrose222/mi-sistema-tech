@@ -6,6 +6,7 @@ const { authenticate } = require('../middleware/authMiddleware');
 router.use(authenticate);
 
 router.get('/', clienteController.listarClientes);
+router.get('/buscar', clienteController.buscarPorDni);
 router.get('/:id', clienteController.obtenerCliente);
 
 router.post('/', clienteController.registrarCliente);

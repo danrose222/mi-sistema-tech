@@ -5,12 +5,19 @@ import { Observable } from 'rxjs';
 export interface Cliente {
   id: number;
   nombre: string;
+  dni: string | null;
   telefono: string;
   email: string;
   direccion: string;
   notas: string;
   historial_crediticio: string;
   created_at: string;
+}
+
+export type EstadoCrediticio = 'moroso' | 'al_dia' | 'sin_historial';
+
+export interface ClienteConEstadoCrediticio extends Cliente {
+  estado_crediticio: EstadoCrediticio;
 }
 
 export interface ClientesResponse {
@@ -40,6 +47,11 @@ export class ClientesService {
 
   obtener(id: number): Observable<{success: boolean, data: Cliente}> {
     return this.http.get<{success: boolean, data: Cliente}>(`${this.apiUrl}/${id}`);
+  }
+
+  buscarPorDni(dni: string): Observable<{success: boolean, data: ClienteConEstadoCrediticio}> {
+    const params = new HttpParams().set('dni', dni);
+    return this.http.get<{success: boolean, data: ClienteConEstadoCrediticio}>(`${this.apiUrl}/buscar`, { params });
   }
 
   crear(data: Partial<Cliente>): Observable<{success: boolean, data: Cliente}> {

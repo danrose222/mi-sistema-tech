@@ -11,6 +11,7 @@ export interface PayerInput {
   email: string;
   name?: string;
   phone?: { number: string };
+  dni?: string;
 }
 
 export type MetodoPago = 'mercado_pago' | 'transferencia' | 'efectivo_local' | 'efectivo_pos';
