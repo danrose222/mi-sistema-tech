@@ -40,6 +40,13 @@ jest.mock('../../src/services/mercadopagoService', () => {
   };
 });
 
+// Mockear emailService: no queremos mandar correos reales en los tests, solo
+// verificar que se llama con los datos correctos y que un fallo suyo no
+// tira abajo el procesamiento del webhook.
+jest.mock('../../src/services/emailService', () => ({
+  enviarComprobanteCompra: jest.fn().mockResolvedValue(undefined)
+}));
+
 describe('Módulo de Pagos (Webhook) Integración', () => {
     let pedidoId;
 
@@ -48,9 +55,12 @@ describe('Módulo de Pagos (Webhook) Integración', () => {
         const clienteId = await global.crearClienteHelper('Cliente Pago');
         const connection = await pool.getConnection();
         try {
-            const [result] = await connection.query('INSERT INTO pedidos (cliente_id, total, estado) VALUES (?, ?, ?)', [clienteId, 1000, 'pendiente']);
+            const [result] = await connection.query(
+                'INSERT INTO pedidos (cliente_id, total, estado, cliente_email) VALUES (?, ?, ?, ?)',
+                [clienteId, 1000, 'pendiente', 'comprador@test.com']
+            );
             pedidoId = result.insertId;
-            
+
             // Forzar que el external_reference en el mock de obtenerPago apunte a ESTE pedido
             const mpService = require('../../src/services/mercadopagoService');
             mpService.obtenerPago.mockResolvedValue({
@@ -62,6 +72,10 @@ describe('Módulo de Pagos (Webhook) Integración', () => {
         } finally {
             connection.release();
         }
+
+        const emailService = require('../../src/services/emailService');
+        emailService.enviarComprobanteCompra.mockClear();
+        emailService.enviarComprobanteCompra.mockResolvedValue(undefined);
     });
 
     describe('POST /api/pedidos/webhook', () => {
@@ -95,6 +109,17 @@ describe('Módulo de Pagos (Webhook) Integración', () => {
             expect(pagos).toHaveLength(1);
             expect(pagos[0].monto).toBe('1000.00'); // DECIMAL se devuelve a veces como string
             expect(pagos[0].estado).toBe('aprobado');
+
+            // Se envía el comprobante al email registrado en el pedido, con el
+            // pedido ya actualizado a "pagado" y sus items
+            const emailService = require('../../src/services/emailService');
+            await esperarHasta(() => emailService.enviarComprobanteCompra.mock.calls.length > 0);
+
+            expect(emailService.enviarComprobanteCompra).toHaveBeenCalledTimes(1);
+            const [{ pedido, items }] = emailService.enviarComprobanteCompra.mock.calls[0];
+            expect(pedido.id).toBe(pedidoId);
+            expect(pedido.cliente_email).toBe('comprador@test.com');
+            expect(Array.isArray(items)).toBe(true);
         });
 
         it('Debería devolver Error 400 si la firma es inválida', async () => {
@@ -174,6 +199,32 @@ describe('Módulo de Pagos (Webhook) Integración', () => {
             expect(res.statusCode).toBe(200);
             expect(res.body.procesado).toBe(false);
             expect(mpService.obtenerPago).not.toHaveBeenCalled();
+        });
+
+        it('Debería marcar el pedido como pagado aunque el envío del comprobante falle', async () => {
+            const emailService = require('../../src/services/emailService');
+            emailService.enviarComprobanteCompra.mockRejectedValueOnce(new Error('SMTP caído'));
+
+            const data = { data: { id: 'pay_999' }, type: 'payment' };
+
+            const res = await request(app)
+                .post('/api/pedidos/webhook')
+                .set('x-mercadopago-topic', 'payment')
+                .set('x-signature', generarFirmaWebhook('pay_999'))
+                .send(data);
+
+            expect(res.statusCode).toBe(200);
+
+            const connection = await pool.getConnection();
+            await esperarHasta(async () => {
+                const [pedidos] = await connection.query('SELECT estado FROM pedidos WHERE id = ?', [pedidoId]);
+                return pedidos[0].estado === 'pagado';
+            });
+            const [pedidos] = await connection.query('SELECT estado FROM pedidos WHERE id = ?', [pedidoId]);
+            connection.release();
+
+            expect(pedidos[0].estado).toBe('pagado');
+            expect(emailService.enviarComprobanteCompra).toHaveBeenCalledTimes(1);
         });
     });
 });

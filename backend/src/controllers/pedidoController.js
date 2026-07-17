@@ -1,5 +1,6 @@
 const pedidoModel = require('../models/pedidoModel');
 const mercadopagoService = require('../services/mercadopagoService');
+const emailService = require('../services/emailService');
 
 exports.listarPedidos = async (req, res) => {
   try {
@@ -76,8 +77,8 @@ exports.crearPedido = async (req, res) => {
     // 2. Crear pedido con el total calculado a partir del precio verificado en BD
     const total = itemsVerificados.reduce((sum, item) => sum + item.precio_unitario * item.cantidad, 0);
     const [result] = await connection.query(
-      'INSERT INTO pedidos (cliente_id, total, metodo_pago) VALUES (?, ?, ?)',
-      [cliente_id || null, total, metodo_pago]
+      'INSERT INTO pedidos (cliente_id, total, metodo_pago, cliente_email) VALUES (?, ?, ?, ?)',
+      [cliente_id || null, total, metodo_pago, payer?.email || null]
     );
     const pedidoId = result.insertId;
 
@@ -225,5 +226,17 @@ async function procesarPagoWebhook(paymentId) {
   if (external_reference && status === 'approved') {
     await pedidoModel.actualizarPedidoEstado(Number(external_reference), 'pagado');
     console.log(`[Webhook MP] Pedido #${external_reference} actualizado a "pagado".`);
+
+    // El envío del comprobante va en su propio try/catch: un SMTP caído o mal
+    // configurado no debe revertir ni bloquear la actualización del pago,
+    // que ya se confirmó y persistió en la línea anterior.
+    try {
+      const pedidoPagado = await pedidoModel.obtenerPedidoConClientePorId(Number(external_reference));
+      const itemsPedido = await pedidoModel.obtenerItemsPorPedido(Number(external_reference));
+      await emailService.enviarComprobanteCompra({ pedido: pedidoPagado, items: itemsPedido });
+      console.log(`[Webhook MP] Comprobante de compra enviado por email para el pedido #${external_reference}.`);
+    } catch (err) {
+      console.error(`[Webhook MP] Error al enviar el comprobante por email del pedido #${external_reference}:`, err);
+    }
   }
 }

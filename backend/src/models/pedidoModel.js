@@ -23,8 +23,14 @@ exports.obtenerPedidoPorId = async (id) => {
 };
 
 exports.obtenerPedidoConClientePorId = async (id) => {
+  // OJO: `c.email AS cliente_registrado_email` (no `cliente_email`) a propósito:
+  // `p.*` ya trae `pedidos.cliente_email` (el que tipeó el comprador en el
+  // checkout, usado para el comprobante); si este JOIN reusara ese mismo
+  // alias, mysql2 devuelve la última columna con ese nombre y pisa el valor
+  // real con el email de clientes (casi siempre NULL, cliente_id rara vez se
+  // linkea desde el checkout).
   const [rows] = await pool.query(
-    `SELECT p.*, c.nombre AS cliente_nombre, c.telefono AS cliente_telefono, c.email AS cliente_email
+    `SELECT p.*, c.nombre AS cliente_nombre, c.telefono AS cliente_telefono, c.email AS cliente_registrado_email
      FROM pedidos p
      LEFT JOIN clientes c ON c.id = p.cliente_id
      WHERE p.id = ?`,
