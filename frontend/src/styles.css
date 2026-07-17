@@ -203,3 +203,20 @@ body {
 .mat-mdc-menu-panel { background: var(--slate) !important; border: 1px solid var(--border-dim) !important; }
 .mat-mdc-menu-item { color: var(--white) !important; }
 .mat-mdc-menu-item:hover { background: rgba(255,255,255,0.05) !important; }
+
+/* ── Impresión (Panel Admin) ─────────────────
+   El Sidenav/Topbar son del LayoutComponent, un ancestro del componente que
+   dispara window.print() (ej. Presupuestos): sus estilos scoped no pueden
+   alcanzarlos. Se ocultan acá, global, junto con el reset de altura fija/
+   overflow del app-shell que si no recorta el contenido largo al imprimir. */
+@media print {
+  body { background: #ffffff !important; }
+  .sidebar, .sidebar-backdrop, .topbar { display: none !important; }
+  .admin-shell, .admin-main, .admin-content {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+  }
+  .admin-content { padding: 0 !important; }
+}
