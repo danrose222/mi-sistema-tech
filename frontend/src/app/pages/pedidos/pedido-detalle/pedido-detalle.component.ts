@@ -223,10 +223,16 @@ export class PedidoDetalleComponent implements OnInit, OnDestroy {
   isLoading = signal(true);
   isSendingReminder = signal(false);
 
-  // La única integración de pago del sistema es Mercado Pago (ver
-  // mercadopagoService): si el pedido tiene preference_id fue generado por
-  // esa vía; si no, no hay forma de saber cómo se cobró sin inventarlo.
-  metodoPago = computed(() => this.pedido()?.mercado_pago_preference_id ? 'Mercado Pago' : 'No especificado');
+  private static readonly METODOS_PAGO_LABEL: Record<string, string> = {
+    mercado_pago: 'Mercado Pago',
+    transferencia: 'Transferencia Bancaria',
+    efectivo_local: 'Efectivo en Local'
+  };
+
+  metodoPago = computed(() => {
+    const metodo = this.pedido()?.metodo_pago;
+    return metodo ? (PedidoDetalleComponent.METODOS_PAGO_LABEL[metodo] || metodo) : 'No especificado';
+  });
 
   // El diálogo es un CDK Overlay fuera del router-outlet: para imprimir solo
   // el comprobante (y no el sidenav/topbar/lista de pedidos de atrás) se

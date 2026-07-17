@@ -27,9 +27,12 @@ exports.obtenerPedido = async (req, res) => {
   }
 };
 
+const METODOS_PAGO_VALIDOS = ['mercado_pago', 'transferencia', 'efectivo_local'];
+
 exports.crearPedido = async (req, res) => {
   const pool = require('../config/database');
   const { cliente_id, items, payer } = req.body;
+  const metodo_pago = req.body.metodo_pago || 'mercado_pago';
 
   if (!items || !Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: 'El pedido debe contener al menos un item' });
@@ -38,6 +41,9 @@ exports.crearPedido = async (req, res) => {
     if (!Number.isInteger(item.producto_id) || !Number.isInteger(item.cantidad) || item.cantidad <= 0) {
       return res.status(400).json({ error: 'Cada item debe tener producto_id y cantidad (entero positivo) válidos' });
     }
+  }
+  if (!METODOS_PAGO_VALIDOS.includes(metodo_pago)) {
+    return res.status(400).json({ error: 'Método de pago inválido' });
   }
 
   const connection = await pool.getConnection();
@@ -69,45 +75,60 @@ exports.crearPedido = async (req, res) => {
 
     // 2. Crear pedido con el total calculado a partir del precio verificado en BD
     const total = itemsVerificados.reduce((sum, item) => sum + item.precio_unitario * item.cantidad, 0);
-    const [result] = await connection.query('INSERT INTO pedidos (cliente_id, total) VALUES (?, ?)', [cliente_id || null, total]);
+    const [result] = await connection.query(
+      'INSERT INTO pedidos (cliente_id, total, metodo_pago) VALUES (?, ?, ?)',
+      [cliente_id || null, total, metodo_pago]
+    );
     const pedidoId = result.insertId;
 
     // 3. Crear items
     const values = itemsVerificados.map((item) => [pedidoId, item.producto_id, item.cantidad, item.precio_unitario]);
     await connection.query('INSERT INTO pedido_items (pedido_id, producto_id, cantidad, precio_unitario) VALUES ?', [values]);
 
-    // 4. Crear preferencia MercadoPago ANTES de hacer commit: si falla, se hace rollback completo
-    //    (stock, pedido e items) en vez de dejar un pedido huérfano con stock ya descontado.
-    const mpItems = itemsVerificados.map((item) => ({
-      title: item.nombre,
-      unit_price: item.precio_unitario,
-      quantity: item.cantidad,
-      currency_id: 'ARS'
-    }));
+    // 4. Transferencia y efectivo en local son acuerdos por fuera de la pasarela:
+    // el pedido queda "pendiente" a la espera de que se confirme manualmente,
+    // sin generar preferencia ni pago_link de Mercado Pago.
+    let pagoLink = null;
+    let preferenceId = null;
 
-    const back_urls = {
-      success: process.env.FRONTEND_SUCCESS_URL || 'http://localhost:4200/pago-exitoso',
-      failure: process.env.FRONTEND_FAILURE_URL || 'http://localhost:4200/pago-fallido',
-      pending: process.env.FRONTEND_PENDING_URL || 'http://localhost:4200/pago-pendiente'
-    };
+    if (metodo_pago === 'mercado_pago') {
+      // Se crea la preferencia ANTES de hacer commit: si falla, se hace
+      // rollback completo (stock, pedido e items) en vez de dejar un pedido
+      // huérfano con stock ya descontado.
+      const mpItems = itemsVerificados.map((item) => ({
+        title: item.nombre,
+        unit_price: item.precio_unitario,
+        quantity: item.cantidad,
+        currency_id: 'ARS'
+      }));
 
-    const preference = await mercadopagoService.crearPreference({
-      items: mpItems,
-      payer,
-      external_reference: String(pedidoId),
-      back_urls
-    });
+      const back_urls = {
+        success: process.env.FRONTEND_SUCCESS_URL || 'http://localhost:4200/pago-exitoso',
+        failure: process.env.FRONTEND_FAILURE_URL || 'http://localhost:4200/pago-fallido',
+        pending: process.env.FRONTEND_PENDING_URL || 'http://localhost:4200/pago-pendiente'
+      };
 
-    await connection.query(
-      'UPDATE pedidos SET pago_link = ?, mercado_pago_preference_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-      [preference.init_point, preference.id, pedidoId]
-    );
+      const preference = await mercadopagoService.crearPreference({
+        items: mpItems,
+        payer,
+        external_reference: String(pedidoId),
+        back_urls
+      });
+
+      pagoLink = preference.init_point;
+      preferenceId = preference.id;
+
+      await connection.query(
+        'UPDATE pedidos SET pago_link = ?, mercado_pago_preference_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        [pagoLink, preferenceId, pedidoId]
+      );
+    }
 
     await connection.commit();
     transactionActive = false;
     connection.release();
 
-    res.status(201).json({ pedido_id: pedidoId, pago_link: preference.init_point, preference_id: preference.id });
+    res.status(201).json({ pedido_id: pedidoId, metodo_pago, pago_link: pagoLink, preference_id: preferenceId });
   } catch (err) {
     if (transactionActive) {
       await connection.rollback();

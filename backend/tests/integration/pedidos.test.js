@@ -106,7 +106,79 @@ describe('Módulo de Pedidos Integración', () => {
             };
 
             const res = await request(app).post('/api/pedidos').send(data);
-            
+
+            expect(res.statusCode).toBe(400);
+        });
+
+        it('Debería usar Mercado Pago por defecto si no se envía metodo_pago (compatibilidad)', async () => {
+            const data = {
+                cliente_id: clienteId,
+                items: [{ producto_id: productoStockId, cantidad: 1, precio_unitario: 1000, nombre: 'Producto Stock' }],
+                payer: { email: 'test@test.com' }
+            };
+
+            const res = await request(app).post('/api/pedidos').send(data);
+
+            expect(res.statusCode).toBe(201);
+            expect(res.body.metodo_pago).toBe('mercado_pago');
+            expect(res.body.pago_link).toBeTruthy();
+        });
+
+        it('Debería crear el pedido pendiente por transferencia sin llamar a Mercado Pago', async () => {
+            const mpService = require('../../src/services/mercadopagoService');
+            mpService.crearPreference.mockClear();
+
+            const data = {
+                cliente_id: clienteId,
+                metodo_pago: 'transferencia',
+                items: [{ producto_id: productoStockId, cantidad: 1, precio_unitario: 1000, nombre: 'Producto Stock' }],
+                payer: { email: 'test@test.com' }
+            };
+
+            const res = await request(app).post('/api/pedidos').send(data);
+
+            expect(res.statusCode).toBe(201);
+            expect(res.body).toHaveProperty('pedido_id');
+            expect(res.body.metodo_pago).toBe('transferencia');
+            expect(res.body.pago_link).toBeNull();
+            expect(mpService.crearPreference).not.toHaveBeenCalled();
+
+            const connection = await pool.getConnection();
+            const [rows] = await connection.query('SELECT estado, metodo_pago, pago_link FROM pedidos WHERE id = ?', [res.body.pedido_id]);
+            connection.release();
+            expect(rows[0].estado).toBe('pendiente');
+            expect(rows[0].metodo_pago).toBe('transferencia');
+            expect(rows[0].pago_link).toBeNull();
+        });
+
+        it('Debería crear el pedido pendiente por efectivo en local sin llamar a Mercado Pago', async () => {
+            const mpService = require('../../src/services/mercadopagoService');
+            mpService.crearPreference.mockClear();
+
+            const data = {
+                cliente_id: clienteId,
+                metodo_pago: 'efectivo_local',
+                items: [{ producto_id: productoStockId, cantidad: 1, precio_unitario: 1000, nombre: 'Producto Stock' }],
+                payer: { email: 'test@test.com' }
+            };
+
+            const res = await request(app).post('/api/pedidos').send(data);
+
+            expect(res.statusCode).toBe(201);
+            expect(res.body.metodo_pago).toBe('efectivo_local');
+            expect(res.body.pago_link).toBeNull();
+            expect(mpService.crearPreference).not.toHaveBeenCalled();
+        });
+
+        it('Debería fallar con Error 400 si metodo_pago no es válido', async () => {
+            const data = {
+                cliente_id: clienteId,
+                metodo_pago: 'bitcoin',
+                items: [{ producto_id: productoStockId, cantidad: 1, precio_unitario: 1000, nombre: 'Producto Stock' }]
+            };
+
+            const res = await request(app).post('/api/pedidos').send(data);
+
             expect(res.statusCode).toBe(400);
         });
     });

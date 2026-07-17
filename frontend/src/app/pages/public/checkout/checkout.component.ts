@@ -1,4 +1,4 @@
-import { Component, inject, PLATFORM_ID } from '@angular/core';
+import { Component, inject, signal, computed, PLATFORM_ID } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -10,7 +10,19 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { CarritoService } from '../../../services/carrito.service';
-import { OrderService } from '../../../services/order.service';
+import { OrderService, MetodoPago } from '../../../services/order.service';
+
+interface OpcionMetodoPago {
+  valor: MetodoPago;
+  titulo: string;
+  descripcion: string;
+  icono: string;
+}
+
+interface PedidoConfirmado {
+  pedidoId: number;
+  metodoPago: MetodoPago;
+}
 
 @Component({
   selector: 'app-checkout',
@@ -27,6 +39,29 @@ import { OrderService } from '../../../services/order.service';
   ],
   template: `
     <div class="page-container">
+      @if (pedidoConfirmado(); as confirmado) {
+        <div class="success-screen">
+          <mat-icon class="success-icon">check_circle</mat-icon>
+          <h1 class="success-title">¡Pedido Confirmado!</h1>
+          <p class="success-subtitle">Tu pedido <strong>#{{ confirmado.pedidoId }}</strong> quedó registrado.</p>
+
+          @if (confirmado.metodoPago === 'transferencia') {
+            <div class="datos-bancarios-card">
+              <h2>Datos para la Transferencia</h2>
+              <p class="datos-bancarios-hint">
+                Coordiná el pago por WhatsApp o en el local. Cuando se acredite la transferencia, confirmamos tu pedido.
+              </p>
+              <div class="dato-row"><span class="dato-label">Titular</span><span class="dato-valor">{{ datosBancarios.titular }}</span></div>
+              <div class="dato-row"><span class="dato-label">CBU</span><span class="dato-valor">{{ datosBancarios.cbu }}</span></div>
+              <div class="dato-row"><span class="dato-label">Alias</span><span class="dato-valor">{{ datosBancarios.alias }}</span></div>
+            </div>
+          } @else {
+            <p class="success-info">Pagás al retirar tu pedido en el local. Te contactaremos para coordinar la entrega.</p>
+          }
+
+          <button mat-flat-button color="primary" class="btn-volver" routerLink="/">Volver al inicio</button>
+        </div>
+      } @else {
       <div class="checkout-header">
         <button mat-icon-button routerLink="/carrito"><mat-icon>arrow_back</mat-icon></button>
         <h1 class="page-title">Finalizar Compra</h1>
@@ -99,22 +134,47 @@ import { OrderService } from '../../../services/order.service';
                   <span>{{ carrito.totalPrecio() | currency:'ARS' }}</span>
                 </div>
               </div>
+
+              <div class="metodo-pago-selector">
+                <h3 class="metodo-pago-heading">Método de Pago</h3>
+                <div class="metodo-pago-grid" role="radiogroup" aria-label="Método de pago">
+                  @for (opcion of metodosPago; track opcion.valor) {
+                    <button
+                      type="button"
+                      class="metodo-pago-opcion"
+                      role="radio"
+                      [attr.aria-checked]="metodoPago() === opcion.valor"
+                      [class.selected]="metodoPago() === opcion.valor"
+                      (click)="metodoPago.set(opcion.valor)">
+                      <mat-icon>{{ opcion.icono }}</mat-icon>
+                      <div class="metodo-pago-texto">
+                        <span class="metodo-pago-titulo">{{ opcion.titulo }}</span>
+                        <span class="metodo-pago-desc">{{ opcion.descripcion }}</span>
+                      </div>
+                    </button>
+                  }
+                </div>
+              </div>
             </mat-card-content>
             <mat-card-actions>
               <button mat-flat-button color="primary" class="full-width btn-pay"
-                      [disabled]="checkoutForm.invalid || isProcessing"
+                      [class.btn-pay--mp]="metodoPago() === 'mercado_pago'"
+                      [disabled]="checkoutForm.invalid || isProcessing()"
                       (click)="pagar()">
-                <mat-icon class="mp-btn-icon">account_balance_wallet</mat-icon>
-                {{ isProcessing ? 'Procesando...' : 'Pagar con MercadoPago' }}
+                <mat-icon class="mp-btn-icon">{{ iconoBoton() }}</mat-icon>
+                {{ textoBoton() }}
               </button>
-              <div class="mp-badge">
-                <mat-icon>verified_user</mat-icon>
-                <span>Pagos seguros procesados por <strong>Mercado Pago</strong></span>
-              </div>
+              @if (metodoPago() === 'mercado_pago') {
+                <div class="mp-badge">
+                  <mat-icon>verified_user</mat-icon>
+                  <span>Pagos seguros procesados por <strong>Mercado Pago</strong></span>
+                </div>
+              }
             </mat-card-actions>
           </mat-card>
         </div>
       </div>
+      }
     </div>
   `,
   styles: [`
@@ -246,7 +306,8 @@ import { OrderService } from '../../../services/order.service';
     /* No tenemos el archivo de marca oficial de Mercado Pago disponible, así
        que en vez de imitar su isotipo se usa su azul de marca (#009ee3) para
        que el botón y el sello de abajo se lean como "esto lo procesa
-       Mercado Pago" sin reproducir su logo. */
+       Mercado Pago" sin reproducir su logo. Para transferencia/efectivo el
+       botón vuelve al --signal del tema: no hay pasarela de por medio. */
     .btn-pay {
       display: flex;
       align-items: center;
@@ -256,8 +317,9 @@ import { OrderService } from '../../../services/order.service';
       font-size: 1.1rem;
       border-radius: 8px;
       margin-bottom: 16px;
-      background-color: #009ee3 !important;
+      background-color: var(--signal) !important;
     }
+    .btn-pay.btn-pay--mp { background-color: #009ee3 !important; }
     .mp-btn-icon { font-size: 20px; width: 20px; height: 20px; }
     /* El estado disabled de Material calcula su color/fondo a partir de negro
        semitransparente (pensado para superficies claras): sobre --void queda
@@ -284,6 +346,102 @@ import { OrderService } from '../../../services/order.service';
     .mp-badge mat-icon { font-size: 18px; width: 18px; height: 18px; color: #009ee3; flex-shrink: 0; }
     .mp-badge strong { color: #29b6f6; font-weight: 700; }
 
+    /* Selector de método de pago */
+    .metodo-pago-selector {
+      border-top: 1px solid var(--border-dim);
+      padding-top: 20px;
+      margin-top: 24px;
+    }
+    .metodo-pago-heading {
+      margin: 0 0 12px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--white);
+    }
+    .metodo-pago-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .metodo-pago-opcion {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      width: 100%;
+      padding: 12px 14px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-dim);
+      border-radius: var(--radius-sm);
+      color: var(--white);
+      cursor: pointer;
+      text-align: left;
+      font-family: var(--font-body);
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+    .metodo-pago-opcion:hover { border-color: var(--border-hover); }
+    .metodo-pago-opcion.selected {
+      border-color: var(--signal);
+      background: rgba(0, 174, 239, 0.08);
+      box-shadow: 0 0 0 1px var(--signal);
+    }
+    .metodo-pago-opcion mat-icon { color: var(--signal); flex-shrink: 0; }
+    .metodo-pago-texto { display: flex; flex-direction: column; gap: 2px; }
+    .metodo-pago-titulo { font-size: 0.92rem; font-weight: 600; }
+    .metodo-pago-desc { font-size: 0.78rem; color: var(--ash); }
+
+    /* Pantalla de éxito (transferencia / efectivo en local) */
+    .success-screen {
+      max-width: 560px;
+      margin: 80px auto;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    .success-icon { font-size: 64px; width: 64px; height: 64px; color: var(--success); margin-bottom: 8px; }
+    .success-title { margin: 0; font-size: 1.8rem; font-weight: 700; color: var(--white); }
+    .success-subtitle { margin: 0 0 8px; color: var(--ash); font-size: 1.05rem; }
+    .success-subtitle strong { color: var(--white); }
+    .success-info {
+      color: var(--ash);
+      font-size: 0.95rem;
+      max-width: 420px;
+      line-height: 1.6;
+      margin: 8px 0 24px;
+    }
+    .datos-bancarios-card {
+      width: 100%;
+      background: var(--slate);
+      border: 1px solid var(--border-dim);
+      border-radius: var(--radius-md);
+      padding: 24px;
+      margin: 16px 0 24px;
+      text-align: left;
+    }
+    .datos-bancarios-card h2 {
+      margin: 0 0 8px;
+      font-size: 1.1rem;
+      color: var(--white);
+      font-family: var(--font-display);
+    }
+    .datos-bancarios-hint {
+      margin: 0 0 16px;
+      color: var(--ash);
+      font-size: 0.85rem;
+      line-height: 1.5;
+    }
+    .dato-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-top: 1px solid var(--border-dim);
+      font-size: 0.95rem;
+    }
+    .dato-label { color: var(--ash); }
+    .dato-valor { color: var(--white); font-weight: 600; }
+    .btn-volver { padding: 10px 32px; }
+
     @media (max-width: 900px) {
       .checkout-layout { grid-template-columns: 1fr; }
       .form-grid { grid-template-columns: 1fr; }
@@ -291,6 +449,7 @@ import { OrderService } from '../../../services/order.service';
     @media (max-width: 480px) {
       .page-container { padding: 32px 16px; }
       .summary-row.total { font-size: 1.25rem; }
+      .success-screen { margin: 40px auto; }
     }
   `]
 })
@@ -302,7 +461,32 @@ export class CheckoutComponent {
   private orderService = inject(OrderService);
   private platformId = inject(PLATFORM_ID);
 
-  isProcessing = false;
+  isProcessing = signal(false);
+  metodoPago = signal<MetodoPago>('mercado_pago');
+  pedidoConfirmado = signal<PedidoConfirmado | null>(null);
+
+  // TODO: reemplazar por el CBU/Alias reales del negocio antes de publicar
+  // esta opción a clientes de verdad.
+  readonly datosBancarios = {
+    titular: 'Cel Shop Center',
+    cbu: 'Pendiente de cargar',
+    alias: 'Pendiente de cargar'
+  };
+
+  readonly metodosPago: OpcionMetodoPago[] = [
+    { valor: 'mercado_pago', titulo: 'Mercado Pago', descripcion: 'Tarjetas, Rapipago, etc.', icono: 'account_balance_wallet' },
+    { valor: 'transferencia', titulo: 'Transferencia Bancaria', descripcion: 'Acuerdo con el vendedor', icono: 'account_balance' },
+    { valor: 'efectivo_local', titulo: 'Efectivo en Local', descripcion: 'Pagás al retirar tu pedido', icono: 'storefront' }
+  ];
+
+  textoBoton = computed(() => {
+    if (this.isProcessing()) return 'Procesando...';
+    return this.metodoPago() === 'mercado_pago' ? 'Pagar con MercadoPago' : 'Confirmar Pedido';
+  });
+
+  iconoBoton = computed(() => {
+    return this.metodosPago.find((opcion) => opcion.valor === this.metodoPago())?.icono || 'shopping_cart_checkout';
+  });
 
   checkoutForm = this.fb.group({
     nombre: ['', Validators.required],
@@ -319,9 +503,9 @@ export class CheckoutComponent {
   }
 
   pagar() {
-    if (this.checkoutForm.invalid || this.isProcessing) return;
+    if (this.checkoutForm.invalid || this.isProcessing()) return;
 
-    this.isProcessing = true;
+    this.isProcessing.set(true);
 
     const { nombre, email, telefono } = this.checkoutForm.value;
     const pedido = {
@@ -333,18 +517,26 @@ export class CheckoutComponent {
         email: email!,
         name: nombre!,
         phone: { number: telefono! }
-      }
+      },
+      metodo_pago: this.metodoPago()
     };
 
     this.orderService.crear(pedido).subscribe({
       next: (res) => {
         this.carrito.vaciar();
-        if (isPlatformBrowser(this.platformId)) {
-          window.location.href = res.pago_link;
+
+        if (res.metodo_pago === 'mercado_pago' && res.pago_link) {
+          if (isPlatformBrowser(this.platformId)) {
+            window.location.href = res.pago_link;
+          }
+          return;
         }
+
+        this.isProcessing.set(false);
+        this.pedidoConfirmado.set({ pedidoId: res.pedido_id, metodoPago: res.metodo_pago });
       },
       error: (err) => {
-        this.isProcessing = false;
+        this.isProcessing.set(false);
         const mensaje = err?.error?.error || 'No pudimos procesar tu pedido. Intentá de nuevo.';
         this.snackBar.open(mensaje, 'Cerrar', { duration: 6000 });
       }

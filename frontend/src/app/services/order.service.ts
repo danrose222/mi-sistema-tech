@@ -13,16 +13,20 @@ export interface PayerInput {
   phone?: { number: string };
 }
 
+export type MetodoPago = 'mercado_pago' | 'transferencia' | 'efectivo_local';
+
 export interface CrearPedidoInput {
   cliente_id?: number | null;
   items: PedidoItemInput[];
   payer: PayerInput;
+  metodo_pago: MetodoPago;
 }
 
 export interface CrearPedidoResponse {
   pedido_id: number;
-  pago_link: string;
-  preference_id: string;
+  metodo_pago: MetodoPago;
+  pago_link: string | null;
+  preference_id: string | null;
 }
 
 export type EstadoPedido = 'pendiente' | 'pagado' | 'cancelado' | 'enviado';
@@ -34,6 +38,7 @@ export interface Pedido {
   cliente_telefono: string | null;
   total: number;
   estado: EstadoPedido;
+  metodo_pago: MetodoPago;
   pago_link: string | null;
   mercado_pago_preference_id: string | null;
   created_at: string;
