@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, ElementRef, ViewChild, computed, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -25,17 +25,39 @@ import { CarritoService } from '../../../services/carrito.service';
           
           <!-- Galería -->
           <div class="product-gallery">
-            <div class="main-image">
-              <img [src]="imagenSeleccionada()" [alt]="producto().nombre" loading="lazy">
-            </div>
-            @if (producto().imagenes && producto().imagenes.length > 1) {
-              <div class="thumbnails">
-                @for (img of producto().imagenes; track img) {
-                  <div class="thumbnail" 
-                       [class.active]="img === imagenSeleccionada()"
-                       (click)="imagenSeleccionada.set(img)">
-                    <img [src]="img" alt="Thumbnail">
+            <div class="carousel-wrapper">
+              @if (totalImagenes() > 1) {
+                <button type="button" class="carousel-arrow carousel-arrow--prev" (click)="irASlide(indiceActivo() - 1)" aria-label="Imagen anterior">
+                  <mat-icon>chevron_left</mat-icon>
+                </button>
+              }
+
+              <div class="carousel-track" #carouselTrack (scroll)="onCarouselScroll()">
+                @if (totalImagenes() > 0) {
+                  @for (img of producto().imagenes; track img; let i = $index) {
+                    <div class="carousel-slide">
+                      <img [src]="img" [alt]="producto().nombre + ' - foto ' + (i + 1)" loading="lazy">
+                    </div>
+                  }
+                } @else {
+                  <div class="carousel-slide">
+                    <img src="assets/producto-ejemplo.jpeg" [alt]="producto().nombre" loading="lazy">
                   </div>
+                }
+              </div>
+
+              @if (totalImagenes() > 1) {
+                <button type="button" class="carousel-arrow carousel-arrow--next" (click)="irASlide(indiceActivo() + 1)" aria-label="Imagen siguiente">
+                  <mat-icon>chevron_right</mat-icon>
+                </button>
+              }
+            </div>
+
+            @if (totalImagenes() > 1) {
+              <div class="carousel-dots">
+                @for (img of producto().imagenes; track img; let i = $index) {
+                  <button type="button" class="dot" [class.active]="i === indiceActivo()"
+                          (click)="irASlide(i)" [attr.aria-label]="'Ir a la imagen ' + (i + 1)"></button>
                 }
               </div>
             }
@@ -112,6 +134,12 @@ import { CarritoService } from '../../../services/carrito.service';
       gap: 64px;
       align-items: start;
     }
+    /* "1fr" es en realidad minmax(auto, 1fr): sin esto, el mínimo automático
+       de la celda toma el ancho de su contenido más ancho (acá, el carrusel)
+       y desborda la grilla entera en pantallas angostas. */
+    .product-layout > * {
+      min-width: 0;
+    }
 
     /* Galería */
     .product-gallery {
@@ -120,39 +148,85 @@ import { CarritoService } from '../../../services/carrito.service';
       gap: 16px;
       position: sticky;
       top: 100px;
+      min-width: 0;
     }
-    .main-image {
+    /* Carrusel: scroll-snap nativo, sin JS de terceros. Cada slide ocupa el
+       100% del ancho visible y encastra al centro; las flechas y los dots
+       solo desplazan el scroll del track, no manejan el swipe táctil (eso
+       lo resuelve el navegador solo). */
+    .carousel-wrapper {
+      position: relative;
+    }
+    .carousel-track {
+      display: flex;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      gap: 1rem;
       background: var(--slate);
       border-radius: 16px;
-      padding: 24px;
+      border: 1px solid var(--border-dim);
+      aspect-ratio: 1;
+      min-width: 0;
+      width: 100%;
+
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+    .carousel-track::-webkit-scrollbar {
+      display: none;
+    }
+    .carousel-slide {
+      flex: 0 0 100%;
+      scroll-snap-align: center;
       display: flex;
       align-items: center;
       justify-content: center;
-      aspect-ratio: 1;
-      border: 1px solid var(--border-dim);
+      padding: 24px;
+      box-sizing: border-box;
     }
-    .main-image img { max-width: 100%; max-height: 100%; object-fit: contain; }
+    .carousel-slide img { max-width: 100%; max-height: 100%; object-fit: contain; }
 
-    .thumbnails {
+    .carousel-arrow {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 1;
       display: flex;
-      gap: 12px;
-      overflow-x: auto;
-      padding-bottom: 8px;
-    }
-    .thumbnail {
-      width: 80px; height: 80px;
-      background: var(--slate);
-      border: 2px solid var(--border-dim);
-      border-radius: 8px;
-      padding: 8px;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 1px solid var(--border-dim);
+      background: rgba(8, 8, 15, 0.7);
+      color: var(--signal);
       cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-      transition: border-color 0.15s ease;
+      backdrop-filter: blur(4px);
+      transition: background-color 0.15s ease, border-color 0.15s ease;
     }
-    .thumbnail.active { border-color: var(--signal); }
-    .thumbnail:hover { border-color: var(--border-hover); }
-    .thumbnail img { max-width: 100%; max-height: 100%; object-fit: contain; }
+    .carousel-arrow:hover { background: rgba(0, 174, 239, 0.15); border-color: var(--signal); }
+    .carousel-arrow--prev { left: 12px; }
+    .carousel-arrow--next { right: 12px; }
+
+    .carousel-dots {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+    }
+    .dot {
+      width: 8px;
+      height: 8px;
+      padding: 0;
+      border: none;
+      border-radius: 50%;
+      background: var(--border-dim);
+      cursor: pointer;
+      transition: background-color 0.15s ease, transform 0.15s ease;
+    }
+    .dot.active {
+      background: var(--signal);
+      transform: scale(1.3);
+    }
 
     /* Info */
     .breadcrumb { margin-bottom: 16px; font-size: 0.9rem; }
@@ -188,6 +262,9 @@ import { CarritoService } from '../../../services/carrito.service';
       .product-title { font-size: 2rem; }
       .product-gallery { position: static; }
     }
+    @media (max-width: 480px) {
+      .price { font-size: 2.1rem; }
+    }
   `]
 })
 export class ProductoDetalleComponent implements OnInit {
@@ -198,9 +275,13 @@ export class ProductoDetalleComponent implements OnInit {
   private carrito = inject(CarritoService);
   private snackBar = inject(MatSnackBar);
 
+  @ViewChild('carouselTrack') carouselTrack?: ElementRef<HTMLDivElement>;
+
   producto = signal<any>(null);
-  imagenSeleccionada = signal<string>('');
   isLoading = signal(true);
+
+  indiceActivo = signal(0);
+  totalImagenes = computed(() => this.producto()?.imagenes?.length ?? 0);
 
   ngOnInit() {
     this.route.paramMap.subscribe(params => {
@@ -217,8 +298,8 @@ export class ProductoDetalleComponent implements OnInit {
       next: (res) => {
         const prod = res.data;
         this.producto.set(prod);
-        this.imagenSeleccionada.set(prod.imagenes?.[0] || 'assets/producto-ejemplo.jpeg');
-        
+        this.indiceActivo.set(0);
+
         // SSR / SEO CRÍTICO: Inyectar meta tags para que google indexe este producto.
         this.seo.setSeoData(
           prod.nombre,
@@ -233,6 +314,32 @@ export class ProductoDetalleComponent implements OnInit {
         this.isLoading.set(false);
       }
     });
+  }
+
+  private anchoDeSlide(): number {
+    const track = this.carouselTrack?.nativeElement;
+    if (!track) return 0;
+    const primerSlide = track.querySelector('.carousel-slide') as HTMLElement | null;
+    if (!primerSlide) return track.clientWidth;
+    const gap = parseFloat(getComputedStyle(track).columnGap || '0');
+    return primerSlide.offsetWidth + gap;
+  }
+
+  irASlide(index: number) {
+    const track = this.carouselTrack?.nativeElement;
+    if (!track) return;
+
+    const destino = Math.max(0, Math.min(index, this.totalImagenes() - 1));
+    track.scrollTo({ left: destino * this.anchoDeSlide(), behavior: 'smooth' });
+    this.indiceActivo.set(destino);
+  }
+
+  onCarouselScroll() {
+    const track = this.carouselTrack?.nativeElement;
+    const ancho = this.anchoDeSlide();
+    if (!track || ancho === 0) return;
+
+    this.indiceActivo.set(Math.round(track.scrollLeft / ancho));
   }
 
   irCategoria() {
