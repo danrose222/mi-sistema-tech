@@ -220,3 +220,39 @@ body {
   }
   .admin-content { padding: 0 !important; }
 }
+
+/* ── Impresión de comprobante desde un mat-dialog (ej. detalle de Pedido) ──
+   El diálogo lo renderiza el CDK Overlay directamente sobre <body>, como
+   hermano de <app-root> (no como hijo del router-outlet), así que las reglas
+   de arriba no lo alcanzan. PedidoDetalleComponent marca el body con esta
+   clase justo antes de imprimir: se apaga todo lo que no sea el overlay y se
+   le quitan al panel del diálogo el tamaño/scroll fijo y el backdrop, para
+   que el comprobante fluya como un documento normal en la hoja impresa. */
+@media print {
+  body.imprimiendo-comprobante > *:not(.cdk-overlay-container) { display: none !important; }
+  body.imprimiendo-comprobante .cdk-overlay-backdrop { display: none !important; }
+  body.imprimiendo-comprobante .cdk-overlay-pane {
+    position: static !important;
+    max-width: none !important;
+    transform: none !important;
+  }
+  body.imprimiendo-comprobante .mat-mdc-dialog-container,
+  body.imprimiendo-comprobante .mdc-dialog__surface {
+    position: static !important;
+    max-height: none !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    background: #ffffff !important;
+  }
+  body.imprimiendo-comprobante .mat-mdc-dialog-content {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  /* Los tooltips de Material también se renderizan en el CDK Overlay: si el
+     mouse quedó sobre un botón al imprimir, no deben colarse en la hoja. */
+  body.imprimiendo-comprobante .mat-mdc-tooltip-panel,
+  body.imprimiendo-comprobante .cdk-overlay-container .mdc-tooltip {
+    display: none !important;
+  }
+}
