@@ -224,6 +224,7 @@ async function pagarCuota(pool, cuotaId, monto, pagoId = null, usuarioId = null)
     );
 
     let creditoLiquidado = false;
+    let creditoReactivado = false;
     let historialActualizado = null;
     if (pendientes[0].count === 0) {
       // Liquidar crédito
@@ -249,10 +250,30 @@ async function pagarCuota(pool, cuotaId, monto, pagoId = null, usuarioId = null)
         [historialActualizado, cuota.cliente_id]
       );
       console.log(`[CreditosService] Historial crediticio del cliente #${cuota.cliente_id} actualizado a "${historialActualizado}".`);
+    } else {
+      // Todavía quedan cuotas pendientes a futuro: si el crédito estaba moroso
+      // y este pago dejó al día todas sus cuotas vencidas, vuelve a "activo".
+      const [creditoRows] = await connection.execute(
+        'SELECT estado FROM creditos WHERE id = ? FOR UPDATE',
+        [cuota.credito_id]
+      );
+
+      if (creditoRows[0]?.estado === 'moroso') {
+        const [vencidas] = await connection.execute(
+          'SELECT count(*) as count FROM cuotas WHERE credito_id = ? AND estado = "vencida"',
+          [cuota.credito_id]
+        );
+
+        if (vencidas[0].count === 0) {
+          await connection.execute('UPDATE creditos SET estado = "activo" WHERE id = ?', [cuota.credito_id]);
+          creditoReactivado = true;
+          console.log(`[CreditosService] Crédito #${cuota.credito_id} volvió a "activo": ya no tiene cuotas vencidas.`);
+        }
+      }
     }
 
     await connection.commit();
-    return { success: true, estadoCuota: nuevoEstado, creditoLiquidado, historialActualizado };
+    return { success: true, estadoCuota: nuevoEstado, creditoLiquidado, creditoReactivado, historialActualizado };
 
   } catch (error) {
     await connection.rollback();

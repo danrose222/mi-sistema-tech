@@ -95,9 +95,9 @@ export class NuevaCuotaDialogComponent {
     const monto = this.form.get('monto')?.value;
 
     this.creditosService.pagarCuota(this.data.creditoId, this.data.cuota.id, monto).subscribe({
-      next: () => {
+      next: (res) => {
         this.snackBar.open('Pago procesado correctamente', 'Cerrar', { duration: 3000 });
-        this.dialogRef.close(true);
+        this.dialogRef.close(res.data);
       },
       error: (err) => {
         console.error(err);

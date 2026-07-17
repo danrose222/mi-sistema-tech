@@ -43,6 +43,14 @@ export interface Credito {
   resumen?: ResumenCredito;
 }
 
+export interface ResultadoPagoCuota {
+  success: boolean;
+  estadoCuota: string;
+  creditoLiquidado: boolean;
+  creditoReactivado: boolean;
+  historialActualizado: string | null;
+}
+
 export interface CreditosResponse {
   success: boolean;
   data: Credito[];
@@ -79,8 +87,8 @@ export class CreditosService {
     return this.http.post<{success: boolean, data: Credito}>(this.apiUrl, data);
   }
 
-  pagarCuota(creditoId: number, cuotaId: number, monto: number): Observable<any> {
-    return this.http.post(`${this.apiUrl}/${creditoId}/cuotas/${cuotaId}/pagar`, { monto });
+  pagarCuota(creditoId: number, cuotaId: number, monto: number): Observable<{ success: boolean; data: ResultadoPagoCuota }> {
+    return this.http.post<{ success: boolean; data: ResultadoPagoCuota }>(`${this.apiUrl}/${creditoId}/cuotas/${cuotaId}/pagar`, { monto });
   }
 
   eliminar(id: number): Observable<{ success: boolean; data: { id: number; eliminado: boolean } }> {

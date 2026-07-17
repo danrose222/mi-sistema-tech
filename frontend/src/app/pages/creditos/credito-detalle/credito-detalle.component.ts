@@ -11,7 +11,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
-import { CreditosService, Credito, Cuota } from '../../../services/creditos.service';
+import { CreditosService, Credito, Cuota, ResultadoPagoCuota } from '../../../services/creditos.service';
 import { NuevaCuotaDialogComponent } from '../nueva-cuota-dialog/nueva-cuota-dialog.component';
 
 @Component({
@@ -490,9 +490,17 @@ export class CreditoDetalleComponent implements OnInit {
       disableClose: true
     });
 
-    dialogRef.afterClosed().subscribe(result => {
-      if (result) {
-        this.cargarDatos(); // Recargar todo el detalle
+    dialogRef.afterClosed().subscribe((resultado: ResultadoPagoCuota | undefined) => {
+      if (!resultado) return;
+
+      // El estado del crédito (badge, progreso, cuotas) lo recarga el backend:
+      // es la fuente de verdad, evita duplicar acá la lógica de moroso/liquidado.
+      this.cargarDatos();
+
+      if (resultado.creditoLiquidado) {
+        this.snackBar.open('¡Crédito liquidado en su totalidad!', 'Cerrar', { duration: 4000 });
+      } else if (resultado.creditoReactivado) {
+        this.snackBar.open('El crédito ya no tiene cuotas vencidas: vuelve a estar activo', 'Cerrar', { duration: 4000 });
       }
     });
   }

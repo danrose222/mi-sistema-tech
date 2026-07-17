@@ -203,6 +203,51 @@ describe('Módulo de Créditos Integración', () => {
 
             expect(res.statusCode).toBe(404);
         });
+
+        it('Debería reactivar a "activo" un crédito moroso cuando ya no quedan cuotas vencidas', async () => {
+            // Simular el escenario que deja el cron marcarCuotasVencidas: la primera
+            // cuota vencida y el crédito marcado como moroso, con 2 cuotas futuras
+            // todavía pendientes (no vencidas).
+            const connection = await pool.getConnection();
+            await connection.query('UPDATE cuotas SET estado = "vencida" WHERE id = ?', [credito.cuotas[0].id]);
+            await connection.query('UPDATE creditos SET estado = "moroso" WHERE id = ?', [credito.id]);
+            connection.release();
+
+            const cuotaId = credito.cuotas[0].id;
+            const res = await request(app)
+                .post(`/api/creditos/${credito.id}/cuotas/${cuotaId}/pagar`)
+                .set('Authorization', `Bearer ${tokenAdmin}`)
+                .send({ monto: 10000 });
+
+            expect(res.statusCode).toBe(200);
+            expect(res.body.data.creditoReactivado).toBe(true);
+
+            const resDetalle = await request(app)
+                .get(`/api/creditos/${credito.id}`)
+                .set('Authorization', `Bearer ${tokenAdmin}`);
+            expect(resDetalle.body.data.estado).toBe('activo');
+        });
+
+        it('No debería reactivar el crédito si todavía quedan otras cuotas vencidas', async () => {
+            const connection = await pool.getConnection();
+            await connection.query('UPDATE cuotas SET estado = "vencida" WHERE credito_id = ?', [credito.id]);
+            await connection.query('UPDATE creditos SET estado = "moroso" WHERE id = ?', [credito.id]);
+            connection.release();
+
+            const cuotaId = credito.cuotas[0].id;
+            const res = await request(app)
+                .post(`/api/creditos/${credito.id}/cuotas/${cuotaId}/pagar`)
+                .set('Authorization', `Bearer ${tokenAdmin}`)
+                .send({ monto: 10000 });
+
+            expect(res.statusCode).toBe(200);
+            expect(res.body.data.creditoReactivado).toBe(false);
+
+            const resDetalle = await request(app)
+                .get(`/api/creditos/${credito.id}`)
+                .set('Authorization', `Bearer ${tokenAdmin}`);
+            expect(resDetalle.body.data.estado).toBe('moroso');
+        });
     });
 
     describe('GET /api/creditos/:id', () => {
