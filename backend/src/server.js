@@ -4,6 +4,7 @@ const runMigrations = require('./migrations/runMigrations');
 const app = require('./app');
 
 require('./cron/vencimientosCron');
+require('./cron/reservasCron');
 
 const cronService = require('./services/cron.service');
 
