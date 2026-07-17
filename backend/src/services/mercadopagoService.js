@@ -1,6 +1,12 @@
 const { MercadoPagoConfig, Preference, Payment, MerchantOrder, WebhookSignatureValidator } = require('mercadopago');
 
-const MP_TOKEN = process.env.MP_ACCESS_TOKEN || '';
+// MP_ACCESS_TOKEN_TEST tiene prioridad para poder apuntar el entorno local
+// (checkout + webhook vía ngrok) a credenciales de Sandbox sin tocar código;
+// en producción alcanza con definir MP_ACCESS_TOKEN. La preferencia y la
+// consulta del pago en el webhook usan el mismo cliente/token a propósito:
+// si se crea la preferencia con una cuenta y se consulta el pago con otra,
+// Mercado Pago devuelve 404/401 en vez del pago real.
+const MP_TOKEN = process.env.MP_ACCESS_TOKEN_TEST || process.env.MP_ACCESS_TOKEN || '';
 const mpClient = new MercadoPagoConfig({ accessToken: MP_TOKEN });
 const preferenceClient = new Preference(mpClient);
 const paymentClient = new Payment(mpClient);

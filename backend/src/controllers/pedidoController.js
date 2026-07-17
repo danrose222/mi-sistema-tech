@@ -144,15 +144,26 @@ exports.crearPedido = async (req, res) => {
 };
 
 exports.webhookPago = async (req, res) => {
-  let data;
+  let topic, data;
   try {
-    ({ data } = mercadopagoService.validarWebhook(req.body, req.headers, req.query));
+    ({ topic, data } = mercadopagoService.validarWebhook(req.body, req.headers, req.query));
   } catch (err) {
     if (err.message === 'Firma inválida') {
+      console.error('[Webhook MP] Firma inválida, notificación rechazada.');
       return res.status(400).json({ error: 'Firma inválida' });
     }
     console.error('[Webhook MP] Error al validar la notificación:', err);
     return res.status(400).json({ error: 'Webhook inválido' });
+  }
+
+  console.log(`[Webhook MP] Notificación recibida - topic: ${topic || 'desconocido'}`);
+
+  // Además de 'payment', Mercado Pago manda otros topics (merchant_order,
+  // chargebacks, etc.) que no traen un payment id utilizable acá. Se acepta
+  // igual con 200 para que no reintente, pero no hay nada que consultar.
+  const esNotificacionDePago = typeof topic === 'string' && topic.toLowerCase().startsWith('payment');
+  if (!esNotificacionDePago) {
+    return res.status(200).json({ received: true, procesado: false });
   }
 
   const paymentId = data.id || (data.data && data.data.id);
@@ -167,19 +178,29 @@ exports.webhookPago = async (req, res) => {
   // desacoplado de la respuesta HTTP.
   res.status(200).json({ received: true });
 
+  console.log(`[Webhook MP] Procesando pago #${paymentId} en segundo plano...`);
+
   procesarPagoWebhook(paymentId).catch((err) => {
-    console.error('[Webhook MP] Error al procesar el pago en segundo plano:', err);
+    console.error(`[Webhook MP] Error al procesar el pago #${paymentId} en segundo plano:`, err);
   });
 };
 
 async function procesarPagoWebhook(paymentId) {
   const pagoExistente = await pedidoModel.obtenerPagoPorProveedorId(paymentId);
-  if (pagoExistente) return;
+  if (pagoExistente) {
+    console.log(`[Webhook MP] Pago #${paymentId} ya estaba procesado (idempotencia), se omite.`);
+    return;
+  }
 
+  // GET https://api.mercadopago.com/v1/payments/{id} vía el SDK oficial,
+  // usando el mismo token con el que se creó la preferencia (ver
+  // mercadopagoService.js: MP_ACCESS_TOKEN_TEST en local, MP_ACCESS_TOKEN en prod).
   const payment = await mercadopagoService.obtenerPago(paymentId);
   const external_reference = payment.external_reference || (payment.order && payment.order.external_reference);
   const status = payment.status;
   const transactionAmount = payment.transaction_amount || 0;
+
+  console.log(`[Webhook MP] Pago #${paymentId} -> status: ${status}, pedido: ${external_reference || 'sin referencia'}`);
 
   const statusMap = {
     approved: 'aprobado',
@@ -198,7 +219,11 @@ async function procesarPagoWebhook(paymentId) {
     raw_payload: payment
   });
 
+  // El stock ya se descuenta al crear el pedido (ver crearPedido más arriba):
+  // se reserva apenas se genera el pedido para no vender de más mientras el
+  // pago está pendiente. Tocarlo de nuevo acá lo descontaría dos veces.
   if (external_reference && status === 'approved') {
     await pedidoModel.actualizarPedidoEstado(Number(external_reference), 'pagado');
+    console.log(`[Webhook MP] Pedido #${external_reference} actualizado a "pagado".`);
   }
 }

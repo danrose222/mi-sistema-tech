@@ -158,5 +158,22 @@ describe('Módulo de Pagos (Webhook) Integración', () => {
 
             expect(pagos).toHaveLength(1); // Mantiene 1, no duplicó
         });
+
+        it('Debería responder 200 sin consultar el pago si el topic no es "payment"', async () => {
+            const mpService = require('../../src/services/mercadopagoService');
+            mpService.obtenerPago.mockClear();
+
+            const data = { data: { id: '123' }, resource: 'https://api.mercadopago.com/merchant_orders/123' };
+
+            const res = await request(app)
+                .post('/api/pedidos/webhook')
+                .set('x-mercadopago-topic', 'merchant_order')
+                .set('x-signature', generarFirmaWebhook('123'))
+                .send(data);
+
+            expect(res.statusCode).toBe(200);
+            expect(res.body.procesado).toBe(false);
+            expect(mpService.obtenerPago).not.toHaveBeenCalled();
+        });
     });
 });
