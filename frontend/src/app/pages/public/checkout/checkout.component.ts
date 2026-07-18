@@ -83,7 +83,8 @@ interface PedidoConfirmado {
 
                 <mat-form-field appearance="outline">
                   <mat-label>DNI</mat-label>
-                  <input matInput formControlName="dni" inputmode="numeric" maxlength="8" placeholder="Sin puntos">
+                  <input matInput formControlName="dni" inputmode="numeric" maxlength="8">
+                  <mat-hint>Ingresar sin puntos ni espacios</mat-hint>
                   @if (checkoutForm.get('dni')?.hasError('required')) {
                     <mat-error>El DNI es obligatorio para procesar la facturación</mat-error>
                   } @else if (checkoutForm.get('dni')?.hasError('pattern')) {
