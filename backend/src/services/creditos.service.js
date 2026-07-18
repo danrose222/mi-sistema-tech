@@ -34,9 +34,12 @@ function addDays(date, days) {
  * Crea un nuevo crédito con sus cuotas y registra el movimiento.
  * @param {Object} pool - Pool de conexiones.
  * @param {Object} data - Datos del crédito.
+ * @param {Object} [externalConnection] - Conexión ya abierta con una transacción en curso
+ *   (ej. desde crearVentaPos, para que stock + pedido + crédito + cuotas sean atómicos).
+ *   Si se pasa, esta función NO abre ni cierra su propia transacción: la maneja el llamador.
  * @returns {Promise<Object>} Crédito creado con sus cuotas.
  */
-async function crearCredito(pool, data) {
+async function crearCredito(pool, data, externalConnection = null) {
   const { clienteId, pedidoId, productoId, montoTotal, cantidadCuotas, frecuencia, fechaPrimeraCuota, usuarioId } = data;
 
   // Validaciones básicas
@@ -46,17 +49,19 @@ async function crearCredito(pool, data) {
   if (!['semanal', 'mensual'].includes(frecuencia)) throw new Error('Frecuencia inválida (semanal o mensual)');
   if (!fechaPrimeraCuota) throw new Error('La fecha de la primera cuota es requerida');
 
+  const dbValidacion = externalConnection || pool;
+
   // a) y b) Validar existencia de cliente (y pedido/producto si aplica)
-  const [clientes] = await pool.execute('SELECT id FROM clientes WHERE id = ?', [clienteId]);
+  const [clientes] = await dbValidacion.execute('SELECT id FROM clientes WHERE id = ?', [clienteId]);
   if (clientes.length === 0) throw new Error('El cliente especificado no existe');
 
   if (pedidoId) {
-    const [pedidos] = await pool.execute('SELECT id FROM pedidos WHERE id = ?', [pedidoId]);
+    const [pedidos] = await dbValidacion.execute('SELECT id FROM pedidos WHERE id = ?', [pedidoId]);
     if (pedidos.length === 0) throw new Error('El pedido especificado no existe');
   }
 
   if (productoId) {
-    const [productos] = await pool.execute('SELECT id FROM productos WHERE id = ?', [productoId]);
+    const [productos] = await dbValidacion.execute('SELECT id FROM productos WHERE id = ?', [productoId]);
     if (productos.length === 0) throw new Error('El producto especificado no existe');
   }
 
@@ -64,17 +69,17 @@ async function crearCredito(pool, data) {
   // Redondeamos a 2 decimales para evitar problemas de precisión en JS
   const montoTotalNumber = parseFloat(montoTotal);
   let montoCuota = Math.round((montoTotalNumber / cantidadCuotas) * 100) / 100;
-  
+
   // Ajustamos la última cuota para que la suma total sea exactamente el montoTotal
   const montoUltimaCuota = Math.round((montoTotalNumber - (montoCuota * (cantidadCuotas - 1))) * 100) / 100;
 
-  const connection = await pool.getConnection();
+  const connection = externalConnection || await pool.getConnection();
 
   try {
     console.log(`[CreditosService] Iniciando creación de crédito para cliente ${clienteId}`);
-    
-    // d) Iniciar transacción
-    await connection.beginTransaction();
+
+    // d) Iniciar transacción (si la conexión es propia; una externa ya tiene una en curso)
+    if (!externalConnection) await connection.beginTransaction();
 
     // Crear crédito
     const nuevoCredito = await creditosRepo.crear(connection, {
@@ -124,20 +129,25 @@ async function crearCredito(pool, data) {
       usuario_id: usuarioId || null
     });
 
-    await connection.commit();
+    if (!externalConnection) await connection.commit();
     console.log(`[CreditosService] Crédito #${nuevoCredito.id} creado exitosamente con ${cantidadCuotas} cuotas.`);
-    
+
     return {
       ...nuevoCredito,
       cuotas: cuotasArray
     };
 
   } catch (error) {
-    await connection.rollback();
-    console.error('[CreditosService] Error al crear crédito, haciendo rollback:', error);
-    throw new Error(`Error en la transacción al crear crédito: ${error.message}`);
+    if (!externalConnection) {
+      await connection.rollback();
+      console.error('[CreditosService] Error al crear crédito, haciendo rollback:', error);
+      throw new Error(`Error en la transacción al crear crédito: ${error.message}`);
+    }
+    // Con conexión externa, el rollback y el mensaje de error los maneja el
+    // llamador (ej. crearVentaPos): relanzamos el error tal cual.
+    throw error;
   } finally {
-    connection.release();
+    if (!externalConnection) connection.release();
   }
 }
 

@@ -14,12 +14,28 @@ export interface PayerInput {
   dni: string;
 }
 
-export type MetodoPago = 'mercado_pago' | 'transferencia' | 'efectivo_local' | 'efectivo_pos';
+export type MetodoPago = 'mercado_pago' | 'transferencia' | 'efectivo_local' | 'efectivo_pos' | 'credito_local';
 
 export interface DesglosePagoInput {
   efectivo: number;
   tarjeta: number;
   transferencia: number;
+}
+
+export interface CreditoPosInput {
+  clienteId: number;
+  cantidadCuotas: number;
+  frecuencia: 'semanal' | 'mensual';
+  fechaPrimeraCuota: string;
+}
+
+export interface Financiacion {
+  credito_id: number;
+  cantidad_cuotas: number;
+  monto_por_cuota: number;
+  total_financiado: number;
+  frecuencia?: 'semanal' | 'mensual';
+  estado_credito?: string;
 }
 
 export interface CrearPedidoInput {
@@ -36,7 +52,7 @@ export interface CrearPedidoResponse {
   preference_id: string | null;
 }
 
-export type EstadoPedido = 'pendiente' | 'pagado' | 'cancelado' | 'enviado' | 'reembolsado';
+export type EstadoPedido = 'pendiente' | 'pagado' | 'cancelado' | 'enviado' | 'reembolsado' | 'financiado';
 
 export interface Pedido {
   id: number;
@@ -62,6 +78,7 @@ export interface PedidoItem {
 export interface PedidoDetalle extends Pedido {
   cliente_email?: string | null;
   items: PedidoItem[];
+  financiacion: Financiacion | null;
 }
 
 export interface PedidosResponse {
@@ -105,6 +122,14 @@ export class OrderService {
     return this.http.post<{ pedido_id: number; total: number; vuelto: number }>(`${this.apiUrl}/pos`, {
       items,
       desglose_pago: desglosePago
+    });
+  }
+
+  crearVentaCredito(items: PedidoItemInput[], credito: CreditoPosInput): Observable<{ pedido_id: number; total: number; vuelto: number; financiacion: Financiacion }> {
+    return this.http.post<{ pedido_id: number; total: number; vuelto: number; financiacion: Financiacion }>(`${this.apiUrl}/pos`, {
+      items,
+      metodo_pago: 'credito_local',
+      credito
     });
   }
 }

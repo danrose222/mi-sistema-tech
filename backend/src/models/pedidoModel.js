@@ -39,6 +39,27 @@ exports.obtenerPedidoConClientePorId = async (id) => {
   return rows[0];
 };
 
+// Si el pedido se vendió a crédito, devuelve el detalle de la financiación
+// (proviene de la tabla `creditos`, no se duplica en `pedidos`). null si no
+// existe un crédito asociado a este pedido.
+exports.obtenerFinanciacionPorPedido = async (pedido_id) => {
+  const [rows] = await pool.query(
+    `SELECT id AS credito_id, cantidad_cuotas, monto_cuota AS monto_por_cuota, monto_total AS total_financiado,
+            frecuencia, estado AS estado_credito
+     FROM creditos
+     WHERE pedido_id = ?
+     ORDER BY id DESC
+     LIMIT 1`,
+    [pedido_id]
+  );
+  if (!rows[0]) return null;
+  return {
+    ...rows[0],
+    monto_por_cuota: Number(rows[0].monto_por_cuota),
+    total_financiado: Number(rows[0].total_financiado)
+  };
+};
+
 exports.obtenerItemsPorPedido = async (pedido_id) => {
   const [rows] = await pool.query(
     `SELECT pi.id, pi.producto_id, pi.cantidad, pi.precio_unitario, p.nombre AS producto_nombre

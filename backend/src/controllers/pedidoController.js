@@ -1,6 +1,7 @@
 const pedidoModel = require('../models/pedidoModel');
 const mercadopagoService = require('../services/mercadopagoService');
 const emailService = require('../services/emailService');
+const creditosService = require('../services/creditos.service');
 
 exports.listarPedidos = async (req, res) => {
   try {
@@ -21,7 +22,8 @@ exports.obtenerPedido = async (req, res) => {
     const pedido = await pedidoModel.obtenerPedidoConClientePorId(req.params.id);
     if (!pedido) return res.status(404).json({ success: false, error: 'Pedido no encontrado' });
     const items = await pedidoModel.obtenerItemsPorPedido(req.params.id);
-    res.json({ success: true, data: { ...pedido, items } });
+    const financiacion = await pedidoModel.obtenerFinanciacionPorPedido(req.params.id);
+    res.json({ success: true, data: { ...pedido, items, financiacion } });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, error: 'Error al obtener pedido' });
@@ -257,7 +259,8 @@ const MARGEN_ERROR_MONTO = 0.01;
 // 'pendiente' ni por el cron de liberación de reservas de 48hs.
 exports.crearVentaPos = async (req, res) => {
   const pool = require('../config/database');
-  const { items, desglose_pago } = req.body;
+  const { items, desglose_pago, metodo_pago, credito } = req.body;
+  const esVentaACredito = metodo_pago === 'credito_local';
 
   if (!items || !Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: 'La venta debe contener al menos un item' });
@@ -268,16 +271,35 @@ exports.crearVentaPos = async (req, res) => {
     }
   }
 
-  if (!desglose_pago || typeof desglose_pago !== 'object') {
-    return res.status(400).json({ error: 'Debe indicar el desglose de pago (efectivo, tarjeta, transferencia)' });
-  }
-  const montos = {
-    efectivo: Number(desglose_pago.efectivo) || 0,
-    tarjeta: Number(desglose_pago.tarjeta) || 0,
-    transferencia: Number(desglose_pago.transferencia) || 0
-  };
-  if (Object.values(montos).some((monto) => monto < 0 || !Number.isFinite(monto))) {
-    return res.status(400).json({ error: 'Los montos del desglose de pago no pueden ser negativos' });
+  let montos = null;
+  if (esVentaACredito) {
+    if (!credito || typeof credito !== 'object') {
+      return res.status(400).json({ error: 'Debe indicar los datos del plan de financiación' });
+    }
+    if (!Number.isInteger(credito.clienteId)) {
+      return res.status(400).json({ error: 'Debe seleccionar un cliente para una venta a crédito' });
+    }
+    if (!Number.isInteger(credito.cantidadCuotas) || credito.cantidadCuotas < 2) {
+      return res.status(400).json({ error: 'La cantidad de cuotas debe ser un entero mayor o igual a 2' });
+    }
+    if (!['semanal', 'mensual'].includes(credito.frecuencia)) {
+      return res.status(400).json({ error: 'Frecuencia inválida (semanal o mensual)' });
+    }
+    if (!credito.fechaPrimeraCuota) {
+      return res.status(400).json({ error: 'Debe indicar la fecha de la primera cuota' });
+    }
+  } else {
+    if (!desglose_pago || typeof desglose_pago !== 'object') {
+      return res.status(400).json({ error: 'Debe indicar el desglose de pago (efectivo, tarjeta, transferencia)' });
+    }
+    montos = {
+      efectivo: Number(desglose_pago.efectivo) || 0,
+      tarjeta: Number(desglose_pago.tarjeta) || 0,
+      transferencia: Number(desglose_pago.transferencia) || 0
+    };
+    if (Object.values(montos).some((monto) => monto < 0 || !Number.isFinite(monto))) {
+      return res.status(400).json({ error: 'Los montos del desglose de pago no pueden ser negativos' });
+    }
   }
 
   const connection = await pool.getConnection();
@@ -306,6 +328,72 @@ exports.crearVentaPos = async (req, res) => {
     }
 
     const total = Math.round(itemsVerificados.reduce((sum, item) => sum + item.precio_unitario * item.cantidad, 0) * 100) / 100;
+
+    if (esVentaACredito) {
+      // Validar el cliente ANTES de insertar el pedido: si no existe, evita
+      // una excepción cruda de FK constraint (sin statusCode -> 500) y deja
+      // un mensaje 400 claro. El rollback de stock ocurre igual en el catch
+      // de más abajo si esto falla más adelante.
+      const [clientesRows] = await connection.query('SELECT id FROM clientes WHERE id = ?', [credito.clienteId]);
+      if (clientesRows.length === 0) {
+        throw Object.assign(new Error('El cliente especificado no existe'), { statusCode: 400 });
+      }
+
+      // Venta a crédito: el stock sale hoy pero el dinero se cobra en cuotas.
+      // 'financiado' (no 'pagado') para que Caja Diaria no la cuente como
+      // ingreso de hoy, y para que el cron de reservas de 48hs no la toque.
+      const [result] = await connection.query(
+        "INSERT INTO pedidos (cliente_id, total, metodo_pago, estado) VALUES (?, ?, 'credito_local', 'financiado')",
+        [credito.clienteId, total]
+      );
+      const pedidoId = result.insertId;
+
+      const values = itemsVerificados.map((item) => [pedidoId, item.producto_id, item.cantidad, item.precio_unitario]);
+      await connection.query('INSERT INTO pedido_items (pedido_id, producto_id, cantidad, precio_unitario) VALUES ?', [values]);
+
+      // Reutiliza la lógica de creditos.service.js (misma que otorga un
+      // crédito manual desde el módulo de Créditos) dentro de ESTA MISMA
+      // transacción: si falla la generación de cuotas, se revierte también
+      // el stock y el pedido recién creados.
+      let creditoCreado;
+      try {
+        creditoCreado = await creditosService.crearCredito(pool, {
+          clienteId: credito.clienteId,
+          pedidoId,
+          montoTotal: total,
+          cantidadCuotas: credito.cantidadCuotas,
+          frecuencia: credito.frecuencia,
+          fechaPrimeraCuota: credito.fechaPrimeraCuota,
+          usuarioId: req.user ? req.user.id : null
+        }, connection);
+      } catch (errCredito) {
+        throw Object.assign(new Error(errCredito.message), { statusCode: 400 });
+      }
+
+      await connection.commit();
+      transactionActive = false;
+      connection.release();
+
+      const financiacion = {
+        credito_id: creditoCreado.id,
+        cantidad_cuotas: credito.cantidadCuotas,
+        monto_por_cuota: creditoCreado.monto_cuota,
+        total_financiado: total
+      };
+
+      // Igual que en procesarPagoWebhook: el envío de email va en su propio
+      // try/catch para que un SMTP caído no afecte la respuesta de la venta,
+      // que ya se confirmó y persistió.
+      try {
+        const pedidoCreado = await pedidoModel.obtenerPedidoConClientePorId(pedidoId);
+        const itemsCreados = await pedidoModel.obtenerItemsPorPedido(pedidoId);
+        await emailService.enviarComprobanteCompra({ pedido: pedidoCreado, items: itemsCreados, financiacion });
+      } catch (errEmail) {
+        console.error(`[POS] Error al enviar el comprobante de crédito por email del pedido #${pedidoId}:`, errEmail);
+      }
+
+      return res.status(201).json({ pedido_id: pedidoId, total, vuelto: 0, financiacion });
+    }
 
     // Tarjeta y transferencia son montos exactos (no hay "vuelto" en un
     // pago electrónico): si entre las dos superan el total, es un error de

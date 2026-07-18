@@ -34,7 +34,7 @@ import { ConfirmarDevolucionDialogComponent } from './confirmar-devolucion-dialo
         <div class="detalle-container">
           <!-- Encabezado exclusivo de impresión: oculto en pantalla -->
           <header class="print-header">
-            <h1>COMPROBANTE DE VENTA</h1>
+            <h1>{{ esVentaACredito() ? 'COMPROBANTE DE COMPRA A CRÉDITO' : 'COMPROBANTE DE VENTA' }}</h1>
             <p class="print-no-fiscal">DOCUMENTO NO VÁLIDO COMO FACTURA</p>
             <p class="print-local">Cel Shop Center - Dean Funes 463, Capilla del Monte, Córdoba</p>
             <div class="print-meta">
@@ -96,6 +96,31 @@ import { ConfirmarDevolucionDialogComponent } from './confirmar-devolucion-dialo
               <span class="total-value">{{ pedido()?.total | currency:'ARS' }}</span>
             </div>
           </div>
+
+          @if (pedido()?.financiacion; as financiacion) {
+            <div class="plan-financiacion">
+              <h3>Plan de Financiación</h3>
+              <div class="info-row">
+                <span class="label">Total Financiado:</span>
+                <span class="value">{{ financiacion.total_financiado | currency:'ARS' }}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">Cantidad de Cuotas:</span>
+                <span class="value">{{ financiacion.cantidad_cuotas }}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">Valor de la Cuota:</span>
+                <span class="value">{{ financiacion.monto_por_cuota | currency:'ARS' }}</span>
+              </div>
+              <p class="texto-legal">
+                Acepto las condiciones del crédito otorgado y me comprometo a abonar las cuotas detalladas en las fechas de vencimiento acordadas.
+              </p>
+              <div class="firma-cliente">
+                <span class="firma-linea"></span>
+                <span class="firma-label">Firma del cliente</span>
+              </div>
+            </div>
+          }
         </div>
       } @else {
         <p class="error-msg">No se encontró información del pedido.</p>
@@ -155,6 +180,7 @@ import { ConfirmarDevolucionDialogComponent } from './confirmar-devolucion-dialo
     .estado-cancelado { background: #fee2e2; color: #dc2626; }
     .estado-enviado { background: #dbeafe; color: #2563eb; }
     .estado-reembolsado { background: #fee2e2; color: #991b1b; }
+    .estado-financiado { background: #ede9fe; color: #6d28d9; }
     .items-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
     .items-table th { text-align: left; color: #64748b; font-weight: 500; padding: 8px 4px; border-bottom: 1px solid #e2e8f0; }
     .items-table td { padding: 8px 4px; border-bottom: 1px solid #f1f5f9; color: #111; }
@@ -169,6 +195,42 @@ import { ConfirmarDevolucionDialogComponent } from './confirmar-devolucion-dialo
       font-size: 1.05rem;
     }
     .error-msg { color: #f44336; text-align: center; }
+
+    /* Sección destacada de plan de financiación (solo ventas a crédito) */
+    .plan-financiacion {
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      border-radius: 8px;
+      padding: 16px 20px;
+    }
+    .plan-financiacion h3 {
+      margin: 0 0 12px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #92400e;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .plan-financiacion .label { color: #92400e; font-weight: 600; }
+    .plan-financiacion .value { color: #78350f; font-weight: 700; }
+    .texto-legal {
+      margin: 12px 0 0;
+      font-size: 0.8rem;
+      color: #92400e;
+      line-height: 1.5;
+    }
+    .firma-cliente {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-top: 32px;
+    }
+    .firma-linea {
+      width: 240px;
+      border-top: 1px solid #92400e;
+      margin-bottom: 4px;
+    }
+    .firma-label { font-size: 0.75rem; color: #92400e; }
 
     /* Encabezado exclusivo de impresión: oculto en pantalla */
     .print-header { display: none; }
@@ -222,6 +284,16 @@ import { ConfirmarDevolucionDialogComponent } from './confirmar-devolucion-dialo
       .footer-info { color: #000 !important; }
       .total-row { border-top: 2px solid #000 !important; color: #000 !important; }
       .total-value { font-size: 1.3rem; }
+
+      .plan-financiacion {
+        background: #fff !important;
+        border: 2px solid #000 !important;
+        margin-top: 16px;
+      }
+      .plan-financiacion h3, .plan-financiacion .label, .plan-financiacion .value, .texto-legal, .firma-label {
+        color: #000 !important;
+      }
+      .firma-linea { border-top-color: #000 !important; }
     }
   `]
 })
@@ -241,13 +313,17 @@ export class PedidoDetalleComponent implements OnInit, OnDestroy {
   private static readonly METODOS_PAGO_LABEL: Record<string, string> = {
     mercado_pago: 'Mercado Pago',
     transferencia: 'Transferencia Bancaria',
-    efectivo_local: 'Efectivo en Local'
+    efectivo_local: 'Efectivo en Local',
+    efectivo_pos: 'Efectivo (Mostrador)',
+    credito_local: 'Crédito / Cuotas'
   };
 
   metodoPago = computed(() => {
     const metodo = this.pedido()?.metodo_pago;
     return metodo ? (PedidoDetalleComponent.METODOS_PAGO_LABEL[metodo] || metodo) : 'No especificado';
   });
+
+  esVentaACredito = computed(() => !!this.pedido()?.financiacion);
 
   // El diálogo es un CDK Overlay fuera del router-outlet: para imprimir solo
   // el comprobante (y no el sidenav/topbar/lista de pedidos de atrás) se

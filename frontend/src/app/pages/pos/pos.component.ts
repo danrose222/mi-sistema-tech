@@ -6,9 +6,10 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
 
 import { ProductosService, Producto } from '../../services/productos.service';
-import { OrderService } from '../../services/order.service';
+import { OrderService, CreditoPosInput } from '../../services/order.service';
 import { PedidoDetalleComponent } from '../pedidos/pedido-detalle/pedido-detalle.component';
 import { PagoMixtoDialogComponent, DesglosePago } from './pago-mixto-dialog/pago-mixto-dialog.component';
+import { VentaCreditoDialogComponent } from './venta-credito-dialog/venta-credito-dialog.component';
 
 interface ItemTicket {
   productoId: number;
@@ -102,6 +103,15 @@ interface ItemTicket {
           (click)="confirmarVenta()">
           <mat-icon>point_of_sale</mat-icon>
           {{ isProcessing() ? 'Registrando...' : 'Confirmar Venta' }}
+        </button>
+
+        <button
+          type="button"
+          class="btn-credito"
+          [disabled]="ticket().length === 0 || isProcessing()"
+          (click)="venderACredito()">
+          <mat-icon>credit_score</mat-icon>
+          Vender a Crédito
         </button>
       </div>
     </div>
@@ -298,6 +308,26 @@ interface ItemTicket {
     .btn-confirmar:hover:not(:disabled) { background: var(--pulse); }
     .btn-confirmar:disabled { background: rgba(255, 255, 255, 0.08); color: var(--ash); cursor: not-allowed; }
 
+    .btn-credito {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin: 0 24px;
+      padding: 12px 0;
+      background: transparent;
+      color: var(--pulse);
+      border: 1px solid var(--pulse);
+      border-radius: var(--radius-sm);
+      font-size: 0.95rem;
+      font-weight: 700;
+      font-family: var(--font-display);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .btn-credito:hover:not(:disabled) { background: rgba(0, 174, 239, 0.08); }
+    .btn-credito:disabled { border-color: var(--border-dim); color: var(--ash); cursor: not-allowed; }
+
     @media (max-width: 900px) {
       .pos-layout { grid-template-columns: 1fr; }
       .lector-panel { position: static; }
@@ -396,6 +426,53 @@ export class PosComponent implements AfterViewInit {
         return;
       }
       this.registrarVenta(desglosePago);
+    });
+  }
+
+  venderACredito() {
+    if (this.ticket().length === 0 || this.isProcessing()) return;
+
+    const dialogRef = this.dialog.open(VentaCreditoDialogComponent, {
+      width: '460px',
+      data: { total: this.total() }
+    });
+
+    dialogRef.afterClosed().subscribe((credito: CreditoPosInput | undefined) => {
+      if (!credito) {
+        this.enfocarInput();
+        return;
+      }
+      this.registrarVentaCredito(credito);
+    });
+  }
+
+  private registrarVentaCredito(credito: CreditoPosInput) {
+    this.isProcessing.set(true);
+
+    const items = this.ticket().map((item) => ({
+      producto_id: item.productoId,
+      cantidad: item.cantidad
+    }));
+
+    this.orderService.crearVentaCredito(items, credito).subscribe({
+      next: (res) => {
+        this.snackBar.open(`Venta a crédito registrada: ${credito.cantidadCuotas} cuotas de ${this.formatearMonto(res.financiacion.monto_por_cuota)}`, 'Cerrar', { duration: 5000 });
+        this.ticket.set([]);
+        this.ultimoEscaneado.set(null);
+        this.isProcessing.set(false);
+        this.enfocarInput();
+
+        this.dialog.open(PedidoDetalleComponent, {
+          width: '520px',
+          data: { pedidoId: res.pedido_id, autoprint: true }
+        });
+      },
+      error: (err) => {
+        this.isProcessing.set(false);
+        const mensaje = err?.error?.error || 'No se pudo registrar la venta a crédito';
+        this.snackBar.open(mensaje, 'Cerrar', { duration: 5000 });
+        this.enfocarInput();
+      }
     });
   }
 
