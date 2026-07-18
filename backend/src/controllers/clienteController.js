@@ -102,6 +102,74 @@ const clienteController = {
             console.error(error);
             res.status(500).json({ success: false, error: 'Hubo un error al eliminar el cliente' });
         }
+    },
+
+    // Registra el cobro (total o parcial) de la deuda histórica de un cliente
+    // migrado de un sistema anterior. Descuenta el monto de clientes.deuda_historica
+    // y lo asienta en caja_movimientos con un concepto explícito, para que el
+    // dinero aparezca en Caja Diaria sin mezclarse con `pedidos` (que representa
+    // ventas reales, no cobros de una deuda que ya existía antes del sistema).
+    pagarDeudaHistorica: async (req, res) => {
+        const pool = require('../config/database');
+        const clienteId = req.params.id;
+        const monto = Number(req.body.monto_pagado);
+
+        if (!Number.isFinite(monto) || monto <= 0) {
+            return res.status(400).json({ success: false, error: 'monto_pagado debe ser un número mayor a cero' });
+        }
+
+        const connection = await pool.getConnection();
+        let transactionActive = false;
+
+        try {
+            await connection.beginTransaction();
+            transactionActive = true;
+
+            const [clientes] = await connection.query(
+                'SELECT id, deuda_historica FROM clientes WHERE id = ? FOR UPDATE',
+                [clienteId]
+            );
+            if (clientes.length === 0) {
+                throw Object.assign(new Error('El cliente especificado no existe'), { statusCode: 404 });
+            }
+
+            const deudaActual = Number(clientes[0].deuda_historica);
+            if (deudaActual <= 0) {
+                throw Object.assign(new Error('El cliente no tiene deuda histórica pendiente'), { statusCode: 409 });
+            }
+            if (monto > deudaActual + 0.01) {
+                throw Object.assign(
+                    new Error(`No se permite pagar más de la deuda pendiente ($${deudaActual})`),
+                    { statusCode: 409 }
+                );
+            }
+
+            const nuevaDeuda = Math.max(0, Math.round((deudaActual - monto) * 100) / 100);
+            await connection.query('UPDATE clientes SET deuda_historica = ? WHERE id = ?', [nuevaDeuda, clienteId]);
+
+            await connection.query(
+                `INSERT INTO caja_movimientos (cliente_id, tipo, concepto, monto, usuario_id)
+                 VALUES (?, 'ingreso', 'Ingreso por cobro de deuda histórica', ?, ?)`,
+                [clienteId, monto, req.user ? req.user.id : null]
+            );
+
+            await connection.commit();
+            transactionActive = false;
+            connection.release();
+
+            res.json({ success: true, data: { id: Number(clienteId), deuda_historica: nuevaDeuda } });
+        } catch (err) {
+            if (transactionActive) {
+                await connection.rollback();
+            }
+            connection.release();
+
+            if (err.statusCode) {
+                return res.status(err.statusCode).json({ success: false, error: err.message });
+            }
+            console.error(err);
+            res.status(500).json({ success: false, error: 'Error al registrar el pago de la deuda histórica' });
+        }
     }
 };
 

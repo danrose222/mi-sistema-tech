@@ -149,6 +149,15 @@ import { ReportesService, CajaDiaria } from '../../services/reportes.service';
                   <span class="caja-item-valor">{{ caja.transferencia | currency:'ARS':'symbol':'1.0-0' }}</span>
                 </div>
               </div>
+              @if (caja.otrosIngresos > 0) {
+                <div class="caja-item">
+                  <mat-icon class="icono-otros">history</mat-icon>
+                  <div class="caja-item-body">
+                    <span class="caja-item-label">Deuda histórica cobrada</span>
+                    <span class="caja-item-valor">{{ caja.otrosIngresos | currency:'ARS':'symbol':'1.0-0' }}</span>
+                  </div>
+                </div>
+              }
             </div>
 
             <p class="caja-hint">
@@ -366,6 +375,7 @@ import { ReportesService, CajaDiaria } from '../../services/reportes.service';
     .caja-item mat-icon { flex-shrink: 0; font-size: 22px; width: 22px; height: 22px; }
     .caja-item .icono-efectivo { color: var(--success); }
     .caja-item .icono-digital { color: var(--signal); }
+    .caja-item .icono-otros { color: var(--danger); }
     .caja-item-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
     .caja-item-label { font-size: 0.78rem; color: var(--ash); }
     .caja-item-valor { font-size: 1.1rem; font-weight: 700; color: var(--white); }

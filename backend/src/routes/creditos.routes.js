@@ -31,6 +31,9 @@ const handleServiceError = (error, res) => {
   if (msg.includes('no existe') || msg.includes('no encontrado')) {
     return res.status(404).json({ success: false, error: error.message });
   }
+  if (msg.includes('deuda histórica')) {
+    return res.status(403).json({ success: false, error: error.message });
+  }
   if (msg.includes('requerido') || msg.includes('inválid') || msg.includes('mayor a cero') || msg.includes('frecuencia')) {
     return res.status(400).json({ success: false, error: error.message });
   }

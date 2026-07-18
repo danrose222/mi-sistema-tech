@@ -1,18 +1,22 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
+import { MatDialog, MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { ClientesService, Cliente } from '../../../services/clientes.service';
+import { PagoDeudaHistoricaDialogComponent } from '../pago-deuda-historica-dialog/pago-deuda-historica-dialog.component';
 
 @Component({
   selector: 'app-cliente-detalle',
   standalone: true,
   imports: [
-    CommonModule, 
-    MatDialogModule, 
-    MatButtonModule, 
+    CommonModule,
+    MatDialogModule,
+    MatButtonModule,
+    MatIconModule,
     MatProgressSpinnerModule,
     MatDividerModule
   ],
@@ -52,18 +56,30 @@ import { ClientesService, Cliente } from '../../../services/clientes.service';
           </div>
           
           <mat-divider></mat-divider>
-          
+
           <div class="info-card">
-            <h3>Estado Financiero / Historial</h3>
-            <p class="muted-text">
-              <i class="material-icons info-icon">info</i>
-              El historial de pedidos y estado de cuenta corriente se obtendrán de módulos complementarios.
-            </p>
-            <ul class="mock-list">
-              <li><strong>Saldo adeudado:</strong> <span class="badge gray">--</span></li>
-              <li><strong>Créditos activos:</strong> <span class="badge gray">--</span></li>
-              <li><strong>Último pedido:</strong> <span class="badge gray">--</span></li>
-            </ul>
+            <h3>Deuda Histórica</h3>
+            @if ((cliente()?.deuda_historica ?? 0) > 0) {
+              <div class="deuda-alerta">
+                <mat-icon>report</mat-icon>
+                <div class="deuda-alerta-body">
+                  <span class="deuda-alerta-label">DEUDA HISTÓRICA</span>
+                  <span class="deuda-alerta-monto">{{ cliente()?.deuda_historica | currency:'ARS' }}</span>
+                </div>
+              </div>
+              <p class="muted-text">
+                <i class="material-icons info-icon">info</i>
+                Saldo migrado de un sistema anterior. El cliente no puede tomar créditos nuevos hasta cancelarlo.
+              </p>
+              <button mat-flat-button color="warn" class="btn-registrar-pago" (click)="registrarPagoDeuda()">
+                <mat-icon>payments</mat-icon> Registrar Pago de Deuda
+              </button>
+            } @else {
+              <p class="muted-text">
+                <i class="material-icons info-icon">check_circle</i>
+                Este cliente no registra deuda histórica.
+              </p>
+            }
           </div>
         </div>
       } @else {
@@ -139,34 +155,34 @@ import { ClientesService, Cliente } from '../../../services/clientes.service';
     .info-icon {
       font-size: 1.2rem;
     }
-    .mock-list {
-      list-style: none;
-      padding: 0;
-      margin-top: 12px;
-    }
-    .mock-list li {
-      margin-bottom: 8px;
-      display: flex;
-      justify-content: space-between;
-      border-bottom: 1px dashed #eee;
-      padding-bottom: 4px;
-    }
-    .badge {
-      background: #eee;
-      padding: 2px 8px;
-      border-radius: 12px;
-      font-size: 0.8rem;
-    }
     .error-msg {
       color: #f44336;
       text-align: center;
     }
+    .deuda-alerta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin-bottom: 12px;
+      color: #b91c1c;
+    }
+    .deuda-alerta mat-icon { flex-shrink: 0; }
+    .deuda-alerta-body { display: flex; flex-direction: column; gap: 2px; }
+    .deuda-alerta-label { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; }
+    .deuda-alerta-monto { font-size: 1.3rem; font-weight: 800; }
+    .btn-registrar-pago { margin-top: 4px; }
   `]
 })
 export class ClienteDetalleComponent implements OnInit {
   dialogRef = inject(MatDialogRef<ClienteDetalleComponent>);
   data = inject(MAT_DIALOG_DATA);
   clientesService = inject(ClientesService);
+  private dialog = inject(MatDialog);
+  private snackBar = inject(MatSnackBar);
 
   cliente = signal<Cliente | null>(null);
   isLoading = signal(true);
@@ -189,6 +205,26 @@ export class ClienteDetalleComponent implements OnInit {
         console.error(err);
         this.isLoading.set(false);
       }
+    });
+  }
+
+  registrarPagoDeuda() {
+    const clienteActual = this.cliente();
+    if (!clienteActual) return;
+
+    const dialogRef = this.dialog.open(PagoDeudaHistoricaDialogComponent, {
+      width: '440px',
+      data: { clienteId: clienteActual.id, deudaActual: clienteActual.deuda_historica }
+    });
+
+    dialogRef.afterClosed().subscribe((resultado: { id: number; deuda_historica: number } | undefined) => {
+      if (!resultado) return;
+
+      // Se actualiza el signal local en vez de refetchear: el backend ya
+      // confirmó el nuevo saldo, y así el badge/botón se actualizan al
+      // instante sin una segunda ida y vuelta al servidor.
+      this.cliente.update((actual) => actual ? { ...actual, deuda_historica: resultado.deuda_historica } : actual);
+      this.snackBar.open('Pago registrado correctamente', 'Cerrar', { duration: 4000 });
     });
   }
 }

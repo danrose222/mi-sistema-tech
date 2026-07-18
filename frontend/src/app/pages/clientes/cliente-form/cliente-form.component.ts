@@ -66,6 +66,16 @@ import { ClientesService } from '../../../services/clientes.service';
           <mat-label>Notas adicionales</mat-label>
           <textarea matInput formControlName="notas" rows="3" placeholder="Información relevante del cliente..."></textarea>
         </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Deuda histórica</mat-label>
+          <span matTextPrefix>$&nbsp;</span>
+          <input matInput type="number" formControlName="deuda_historica" min="0" step="0.01">
+          <mat-hint>Solo para clientes migrados de un sistema anterior con saldo pendiente. Dejar en 0 si no aplica.</mat-hint>
+          @if (form.get('deuda_historica')?.hasError('min')) {
+            <mat-error>No puede ser negativa</mat-error>
+          }
+        </mat-form-field>
       </form>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
@@ -107,7 +117,8 @@ export class ClienteFormComponent {
     email: [this.data?.cliente?.email || '', [Validators.email]],
     telefono: [this.data?.cliente?.telefono || '', [Validators.required, Validators.pattern(this.phonePattern)]],
     direccion: [this.data?.cliente?.direccion || ''],
-    notas: [this.data?.cliente?.notas || '']
+    notas: [this.data?.cliente?.notas || ''],
+    deuda_historica: [this.data?.cliente?.deuda_historica ?? 0, [Validators.min(0)]]
   });
 
   guardar() {

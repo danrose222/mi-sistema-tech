@@ -5,10 +5,13 @@ import { Observable } from 'rxjs';
 export interface CajaDiaria {
   fecha: string;
   cantidadVentas: number;
+  cantidadDevoluciones: number;
   totalGeneral: number;
   efectivo: number;
   transferencia: number;
   tarjetaMp: number;
+  otrosIngresos: number;
+  cantidadOtrosIngresos: number;
 }
 
 @Injectable({

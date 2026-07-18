@@ -11,6 +11,7 @@ export interface Cliente {
   direccion: string;
   notas: string;
   historial_crediticio: string;
+  deuda_historica: number;
   created_at: string;
 }
 
@@ -64,5 +65,12 @@ export class ClientesService {
 
   eliminar(id: number): Observable<{success: boolean}> {
     return this.http.delete<{success: boolean}>(`${this.apiUrl}/${id}`);
+  }
+
+  pagarDeudaHistorica(id: number, montoPagado: number): Observable<{success: boolean, data: { id: number; deuda_historica: number }}> {
+    return this.http.put<{success: boolean, data: { id: number; deuda_historica: number }}>(
+      `${this.apiUrl}/${id}/pagar-deuda-historica`,
+      { monto_pagado: montoPagado }
+    );
   }
 }

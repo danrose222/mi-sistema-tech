@@ -53,8 +53,17 @@ async function crearCredito(pool, data, externalConnection = null) {
   const dbValidacion = externalConnection || pool;
 
   // a) y b) Validar existencia de cliente (y pedido/producto si aplica)
-  const [clientes] = await dbValidacion.execute('SELECT id FROM clientes WHERE id = ?', [clienteId]);
+  const [clientes] = await dbValidacion.execute('SELECT id, deuda_historica FROM clientes WHERE id = ?', [clienteId]);
   if (clientes.length === 0) throw new Error('El cliente especificado no existe');
+
+  // Clientes migrados de un sistema anterior con saldo pendiente no pueden
+  // tomar un crédito nuevo hasta cancelar esa deuda: se cruzarían dos deudas
+  // distintas bajo el mismo cliente sin ninguna forma de distinguirlas en los
+  // reportes. Se valida acá (no en el controller) porque este service también
+  // lo usa crearVentaPos para las ventas a crédito del POS.
+  if (Number(clientes[0].deuda_historica) > 0) {
+    throw new Error('El cliente registra una deuda histórica. Debe cancelarla antes de solicitar un nuevo crédito.');
+  }
 
   if (pedidoId) {
     const [pedidos] = await dbValidacion.execute('SELECT id FROM pedidos WHERE id = ?', [pedidoId]);

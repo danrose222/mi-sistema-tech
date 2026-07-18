@@ -75,6 +75,11 @@ import { ClienteDetalleComponent } from './cliente-detalle/cliente-detalle.compo
                   <mat-icon>verified</mat-icon> Cliente Cumplidor
                 </span>
               }
+              @if (element.deuda_historica > 0) {
+                <span class="badge-deuda" matTooltip="Deuda migrada de un sistema anterior, pendiente de cobro">
+                  <mat-icon>report</mat-icon> DEUDA HISTÓRICA: {{ element.deuda_historica | currency:'ARS' }}
+                </span>
+              }
             </td>
           </ng-container>
 
@@ -239,6 +244,24 @@ import { ClienteDetalleComponent } from './cliente-detalle/cliente-detalle.compo
       color: #a16207;
     }
     .badge-historial mat-icon {
+      font-size: 14px;
+      width: 14px;
+      height: 14px;
+    }
+    .badge-deuda {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-left: 8px;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      vertical-align: middle;
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+    .badge-deuda mat-icon {
       font-size: 14px;
       width: 14px;
       height: 14px;

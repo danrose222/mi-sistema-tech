@@ -57,6 +57,17 @@ exports.obtenerCajaDiaria = async (req, res) => {
        GROUP BY pg.proveedor`
     );
 
+    // Ingresos que no son ventas (ej. cobro de deuda histórica de un cliente
+    // migrado): viven en caja_movimientos, no en pedidos, para no mezclar
+    // "vendimos algo hoy" con "cobramos una deuda de antes del sistema".
+    // Igual entran al total general de la caja, porque es dinero real que
+    // ingresó hoy.
+    const [[otrosIngresosHoy]] = await pool.query(
+      `SELECT COALESCE(SUM(monto), 0) AS total, COUNT(*) AS cantidad
+       FROM caja_movimientos
+       WHERE tipo = 'ingreso' AND DATE(created_at) = CURDATE()`
+    );
+
     const resumen = { efectivo: 0, transferencia: 0, tarjetaMp: 0 };
     for (const fila of ingresosPorProveedor) {
       const bucket = agruparProveedor(fila.proveedor);
@@ -73,10 +84,12 @@ exports.obtenerCajaDiaria = async (req, res) => {
         fecha: new Date().toISOString().split('T')[0],
         cantidadVentas: ventasHoy.cantidad,
         cantidadDevoluciones: devolucionesHoy.cantidad,
-        totalGeneral: Number(ventasHoy.total) - Number(devolucionesHoy.total),
+        totalGeneral: Number(ventasHoy.total) - Number(devolucionesHoy.total) + Number(otrosIngresosHoy.total),
         efectivo: resumen.efectivo,
         transferencia: resumen.transferencia,
-        tarjetaMp: resumen.tarjetaMp
+        tarjetaMp: resumen.tarjetaMp,
+        otrosIngresos: Number(otrosIngresosHoy.total),
+        cantidadOtrosIngresos: otrosIngresosHoy.cantidad
       }
     });
   } catch (err) {
