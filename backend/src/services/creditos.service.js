@@ -5,6 +5,7 @@
 const creditosRepo = require('../repositories/creditos.repository');
 const cuotasRepo = require('../repositories/cuotas.repository');
 const cuentasCorrientesRepo = require('../repositories/cuentas-corrientes.repository');
+const notificacionesService = require('./notificaciones.service');
 
 /**
  * Función auxiliar para sumar meses a una fecha.
@@ -283,6 +284,16 @@ async function pagarCuota(pool, cuotaId, monto, pagoId = null, usuarioId = null)
     }
 
     await connection.commit();
+
+    // Confirmación por WhatsApp de que el pago se acreditó: solo cuando la
+    // cuota queda totalmente paga (no en pagos parciales, donde "ya se
+    // acreditó tu cuota" sería engañoso). Va después del commit y no lanza
+    // excepción si falla (ver notificaciones.service.js#enviarConfirmacionPago),
+    // así un WhatsApp caído no revierte ni bloquea el pago ya confirmado.
+    if (nuevoEstado === 'pagada') {
+      await notificacionesService.enviarConfirmacionPago(pool, cuotaId, creditoLiquidado);
+    }
+
     return { success: true, estadoCuota: nuevoEstado, creditoLiquidado, creditoReactivado, historialActualizado };
 
   } catch (error) {

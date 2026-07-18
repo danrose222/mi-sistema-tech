@@ -51,6 +51,60 @@ function construirMensaje(cuota) {
 }
 
 /**
+ * Arma el texto de confirmación cuando se acredita el pago de una cuota, para
+ * que el cliente tenga certeza de que su pago impactó. Es texto libre (no
+ * plantilla): lo dispara una acción del cajero/admin dentro de la ventana de
+ * 24hs de atención, igual que construirMensaje().
+ * @param {Object} cuota - Cuota con datos de cliente/producto (ver cuotasRepo.buscarDetalleParaRecordatorio).
+ * @param {boolean} [creditoLiquidado] - Si este pago dejó el crédito completamente saldado.
+ * @returns {string} Mensaje listo para enviar por WhatsApp.
+ */
+function construirMensajeConfirmacionPago(cuota, creditoLiquidado = false) {
+  const productoTexto = cuota.producto_nombre ? ` de tu ${cuota.producto_nombre}` : '';
+  const totalCuotas = cuota.cantidad_cuotas ? `/${cuota.cantidad_cuotas}` : '';
+
+  let mensaje = `Hola ${cuota.cliente_nombre}, ¡ya se acreditó el pago de tu cuota ${cuota.numero}${totalCuotas}${productoTexto}!`;
+  mensaje += creditoLiquidado
+    ? ' Con este pago completaste tu crédito. ¡Gracias por tu confianza! 🎉'
+    : ' Gracias por tu pago.';
+
+  return mensaje;
+}
+
+/**
+ * Envía la confirmación de pago acreditado de una cuota puntual. No lanza
+ * excepción si falla (SMTP/WhatsApp caído, cliente sin teléfono, etc.): esto
+ * es un efecto secundario del pago ya confirmado y persistido, no debe
+ * revertirlo ni bloquear la respuesta al cajero.
+ * @param {Object} pool - Pool de conexiones.
+ * @param {number} cuotaId - ID de la cuota recién pagada.
+ * @param {boolean} [creditoLiquidado] - Si este pago dejó el crédito completamente saldado.
+ * @returns {Promise<{enviado: boolean, error?: string}>}
+ */
+async function enviarConfirmacionPago(pool, cuotaId, creditoLiquidado = false) {
+  try {
+    const cuota = await cuotasRepo.buscarDetalleParaRecordatorio(pool, cuotaId);
+    if (!cuota) {
+      console.warn(`[NotificacionesService] No se encontró la cuota #${cuotaId} para enviar la confirmación de pago.`);
+      return { enviado: false };
+    }
+    if (!cuota.cliente_telefono) {
+      console.warn(`[NotificacionesService] Cuota #${cuotaId} (cliente #${cuota.cliente_id}) sin teléfono registrado, se omite la confirmación de pago.`);
+      return { enviado: false };
+    }
+
+    await whatsappService.enviarMensaje({
+      telefono: cuota.cliente_telefono,
+      mensaje: construirMensajeConfirmacionPago(cuota, creditoLiquidado)
+    });
+    return { enviado: true };
+  } catch (error) {
+    console.error(`[NotificacionesService] Error al enviar confirmación de pago de la cuota #${cuotaId}:`, error.message);
+    return { enviado: false, error: error.message };
+  }
+}
+
+/**
  * Recorre las cuotas "por vencer" (hoy/mañana) y "vencidas" (sin recordatorio
  * en los últimos 3 días) y les envía un WhatsApp de cobranza. Corre a diario
  * vía cron (ver cron.service.js) y también puede llamarse a demanda.
@@ -89,4 +143,10 @@ async function enviarRecordatoriosDeCuotas(pool) {
   return { total: cuotas.length, enviados, fallidos, omitidos };
 }
 
-module.exports = { enviarRecordatoriosDeCuotas, construirParametrosPlantilla, construirMensaje };
+module.exports = {
+  enviarRecordatoriosDeCuotas,
+  construirParametrosPlantilla,
+  construirMensaje,
+  construirMensajeConfirmacionPago,
+  enviarConfirmacionPago
+};

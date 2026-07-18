@@ -188,18 +188,21 @@ async function buscarParaRecordatorio(db) {
 }
 
 /**
- * Busca una cuota puntual con los datos de cliente/producto necesarios para
- * armar un recordatorio manual (sin las condiciones de anti-spam del cron).
+ * Busca una cuota puntual con los datos de cliente/producto/crédito necesarios
+ * para armar un mensaje de WhatsApp fuera del cron: tanto el recordatorio manual
+ * (POST /api/cuotas/:id/recordatorio) como la confirmación de pago acreditado
+ * (ver notificaciones.service.js#enviarConfirmacionPago) reutilizan esta misma
+ * consulta en vez de duplicar el JOIN cliente/producto.
  * @param {Object} db - Instancia de conexión o pool.
  * @param {number} cuotaId - ID de la cuota.
- * @returns {Promise<Object|null>} Cuota con datos de cliente y producto, o null.
+ * @returns {Promise<Object|null>} Cuota con datos de cliente, producto y crédito, o null.
  */
 async function buscarDetalleParaRecordatorio(db, cuotaId) {
   try {
     const query = `
       SELECT
         cu.id, cu.numero, cu.monto, cu.fecha_vencimiento, cu.estado, cu.ultimo_recordatorio,
-        cr.id AS credito_id,
+        cr.id AS credito_id, cr.cantidad_cuotas,
         c.id AS cliente_id, c.nombre AS cliente_nombre, c.telefono AS cliente_telefono,
         p.nombre AS producto_nombre
       FROM cuotas cu
