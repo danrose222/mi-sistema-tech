@@ -1,3 +1,10 @@
+// Zona horaria por defecto del proceso: el VPS puede estar en UTC o en la
+// zona del datacenter, pero el negocio opera en Argentina. Se fija ANTES de
+// cualquier otro require para que Date, los timestamps de MySQL y los cron
+// jobs que no reciban timezone explícita usen la hora local real. Se
+// respeta un TZ ya definido en el entorno del VPS en vez de pisarlo.
+process.env.TZ = process.env.TZ || 'America/Argentina/Buenos_Aires';
+
 require('dotenv').config();
 const db = require('./config/database');
 const runMigrations = require('./migrations/runMigrations');

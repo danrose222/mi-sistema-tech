@@ -32,7 +32,7 @@ function iniciarCrons(pool) {
       console.error('[CronService] Error catastrófico al ejecutar marcarCuotasVencidas:', error.message);
     }
     console.log('------------------------------------------------------------\n');
-  });
+  }, { timezone: 'America/Argentina/Buenos_Aires' });
 
   // =========================================================================
   // 2. Enviar recordatorios de WhatsApp de cuotas por vencer y vencidas
@@ -53,7 +53,7 @@ function iniciarCrons(pool) {
       console.error('[CronService] Error catastrófico al ejecutar enviarRecordatoriosDeCuotas:', error.message);
     }
     console.log('------------------------------------------------------------\n');
-  });
+  }, { timezone: 'America/Argentina/Buenos_Aires' });
 
   console.log('[CronService] Cron jobs inicializados correctamente.');
 }

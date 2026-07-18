@@ -36,6 +36,6 @@ const enviarRecordatoriosVencidos = async () => {
 cron.schedule(`${MINUTOS} ${HORAS} * * *`, () => {
   console.log('Ejecutando cron de vencimientos...');
   enviarRecordatoriosVencidos();
-});
+}, { timezone: 'America/Argentina/Buenos_Aires' });
 
 module.exports = { enviarRecordatoriosVencidos };

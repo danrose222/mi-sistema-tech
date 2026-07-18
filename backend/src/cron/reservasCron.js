@@ -69,6 +69,6 @@ cron.schedule('0 * * * *', () => {
     // El error ya quedó logueado dentro de liberarReservasExpiradas; acá solo
     // se evita que un throw sin capturar tire abajo el proceso del cron.
   });
-});
+}, { timezone: 'America/Argentina/Buenos_Aires' });
 
 module.exports = { liberarReservasExpiradas };

@@ -24,9 +24,29 @@ app.use(helmet({
 // 2. Compression: Mejora el rendimiento comprimiendo las respuestas (GZIP)
 app.use(compression());
 
-// 3. CORS Restrictivo: Solo permitir el dominio del frontend
+// 3. CORS Restrictivo: solo los orígenes explícitamente permitidos.
+// ALLOWED_ORIGINS es una lista separada por comas (ej.
+// "https://celshopcenter.com.ar,https://www.celshopcenter.com.ar") para
+// poder habilitar dominio raíz + www, o admin/tienda en subdominios
+// distintos, sin tocar código. Sin ALLOWED_ORIGINS definida, se cae a
+// FRONTEND_URL (o localhost en desarrollo) para no romper entornos que
+// todavía no la configuraron.
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || process.env.FRONTEND_URL || 'http://localhost:4200')
+    .split(',')
+    .map((origen) => origen.trim())
+    .filter(Boolean);
+
 const corsOptions = {
-    origin: process.env.FRONTEND_URL || 'http://localhost:4200',
+    origin: (origin, callback) => {
+        // Sin header Origin (webhook de Mercado Pago, curl, health checks del
+        // VPS) no es una petición de navegador: CORS no aplica y no
+        // corresponde rechazarla acá, esa validación es responsabilidad de
+        // cada endpoint (ej. la firma del webhook).
+        if (!origin || allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+        callback(Object.assign(new Error(`Origen no permitido por CORS: ${origin}`), { statusCode: 403 }));
+    },
     optionsSuccessStatus: 200
 };
 app.use(cors(corsOptions));
