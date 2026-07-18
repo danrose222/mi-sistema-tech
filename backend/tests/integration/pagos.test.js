@@ -95,11 +95,14 @@ describe('Módulo de Pagos (Webhook) Integración', () => {
             expect(res.body.received).toBe(true);
 
             // Verificar base de datos (pagos y estado de pedido) una vez que el
-            // procesamiento en segundo plano terminó
+            // procesamiento en segundo plano terminó. `pagos` se escribe ANTES
+            // que el estado del pedido en procesarPagoWebhook, así que esperar
+            // solo esa fila deja una carrera con la actualización de estado,
+            // que es la condición que realmente se afirma abajo.
             const connection = await pool.getConnection();
             await esperarHasta(async () => {
-                const [pagos] = await connection.query('SELECT * FROM pagos WHERE proveedor_payment_id = ?', ['pay_999']);
-                return pagos.length > 0;
+                const [pedidos] = await connection.query('SELECT estado FROM pedidos WHERE id = ?', [pedidoId]);
+                return pedidos[0].estado === 'pagado';
             });
             const [pedidos] = await connection.query('SELECT estado FROM pedidos WHERE id = ?', [pedidoId]);
             const [pagos] = await connection.query('SELECT * FROM pagos WHERE proveedor_payment_id = ?', ['pay_999']);
