@@ -57,7 +57,22 @@ import { ProductosService, Producto } from '../../../services/productos.service'
                 <ng-template matStepLabel>Seleccionar Cliente</ng-template>
                 <div class="step-content">
                   <p class="step-desc">Busque y seleccione el cliente al cual se le otorgará el crédito.</p>
-                  
+
+                  <div class="dni-busqueda-row">
+                    <mat-form-field appearance="outline" class="dni-field">
+                      <mat-label>Buscar por DNI</mat-label>
+                      <input matInput #dniInput type="text" inputmode="numeric" maxlength="8" placeholder="Ej. 30111222" (keyup.enter)="buscarPorDni(dniInput.value)">
+                      <button matSuffix mat-icon-button [disabled]="buscandoPorDni()" (click)="buscarPorDni(dniInput.value)" aria-label="Buscar por DNI">
+                        <mat-icon>badge</mat-icon>
+                      </button>
+                    </mat-form-field>
+                  </div>
+                  @if (errorBusquedaDni(); as msg) {
+                    <p class="dni-error">{{ msg }}</p>
+                  }
+
+                  <div class="separador-o"><span>o buscá por nombre / email</span></div>
+
                   <mat-form-field appearance="outline" class="full-width search-field">
                     <mat-label>Buscar cliente...</mat-label>
                     <input matInput type="text" formControlName="clienteSearch" [matAutocomplete]="auto" placeholder="Nombre o email...">
@@ -70,6 +85,16 @@ import { ProductosService, Producto } from '../../../services/productos.service'
                     </mat-autocomplete>
                     <mat-icon matSuffix>search</mat-icon>
                   </mat-form-field>
+
+                  @if (clienteSeleccionado(); as c) {
+                    <div class="cliente-seleccionado-card">
+                      <mat-icon>check_circle</mat-icon>
+                      <div>
+                        <strong>{{ c.nombre }}</strong>
+                        <span>{{ c.telefono || 'Sin teléfono' }}</span>
+                      </div>
+                    </div>
+                  }
                 </div>
                 
                 <div class="step-actions">
@@ -225,6 +250,44 @@ import { ProductosService, Producto } from '../../../services/productos.service'
     .search-field { max-width: 500px; }
     .muted-text { color: #94a3b8; font-size: 0.9em; }
 
+    .dni-busqueda-row { max-width: 320px; }
+    .dni-field { width: 100%; }
+    .dni-error {
+      margin: -8px 0 16px;
+      color: #b91c1c;
+      font-size: 0.85rem;
+    }
+    .separador-o {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 4px 0 20px;
+      color: #94a3b8;
+      font-size: 0.8rem;
+    }
+    .separador-o::before, .separador-o::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #e2e8f0;
+    }
+    .cliente-seleccionado-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 16px;
+      padding: 12px 16px;
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 8px;
+      color: #15803d;
+      max-width: 500px;
+    }
+    .cliente-seleccionado-card mat-icon { flex-shrink: 0; }
+    .cliente-seleccionado-card div { display: flex; flex-direction: column; gap: 2px; }
+    .cliente-seleccionado-card strong { color: #14532d; }
+    .cliente-seleccionado-card span { font-size: 0.85rem; color: #16a34a; }
+
     .form-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -311,6 +374,8 @@ export class NuevoCreditoComponent implements OnInit {
   isSubmitting = signal(false);
   clientesFiltrados = signal<Cliente[]>([]);
   productosFiltrados = signal<Producto[]>([]);
+  buscandoPorDni = signal(false);
+  errorBusquedaDni = signal<string | null>(null);
 
   // Forms
   clienteFormGroup = this.fb.group({
@@ -413,6 +478,30 @@ export class NuevoCreditoComponent implements OnInit {
 
   displayCliente(cliente: Cliente): string {
     return cliente && cliente.nombre ? cliente.nombre : '';
+  }
+
+  buscarPorDni(dniRaw: string) {
+    const dni = dniRaw.trim();
+    if (!dni || this.buscandoPorDni()) return;
+
+    this.buscandoPorDni.set(true);
+    this.errorBusquedaDni.set(null);
+
+    this.clientesService.buscarPorDni(dni).subscribe({
+      next: (res) => {
+        this.buscandoPorDni.set(false);
+        // Mismo mecanismo que seleccionar una opción del autocomplete (que
+        // vía ControlValueAccessor tampoco pasa por chequeo de tipos acá):
+        // el computed `clienteSeleccionado` reacciona a este valor solo.
+        this.clienteFormGroup.get('clienteSearch')?.setValue(res.data as any);
+      },
+      error: (err) => {
+        this.buscandoPorDni.set(false);
+        this.errorBusquedaDni.set(
+          err?.status === 404 ? 'No se encontró ningún cliente con ese DNI' : 'Error al buscar el cliente'
+        );
+      }
+    });
   }
 
   displayProducto(producto: Producto): string {

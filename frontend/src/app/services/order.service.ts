@@ -120,10 +120,11 @@ export class OrderService {
     return this.http.post<{ success: boolean; data: { id: number; estado: EstadoPedido } }>(`${this.apiUrl}/${id}/devolucion`, {});
   }
 
-  crearVentaPos(items: PedidoItemInput[], desglosePago: DesglosePagoInput): Observable<{ pedido_id: number; total: number; vuelto: number }> {
+  crearVentaPos(items: PedidoItemInput[], desglosePago: DesglosePagoInput, clienteId?: number | null): Observable<{ pedido_id: number; total: number; vuelto: number }> {
     return this.http.post<{ pedido_id: number; total: number; vuelto: number }>(`${this.apiUrl}/pos`, {
       items,
-      desglose_pago: desglosePago
+      desglose_pago: desglosePago,
+      cliente_id: clienteId ?? null
     });
   }
 

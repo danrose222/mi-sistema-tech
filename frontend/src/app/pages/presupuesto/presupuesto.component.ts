@@ -11,6 +11,7 @@ import { debounceTime, distinctUntilChanged, switchMap, catchError } from 'rxjs/
 import { of } from 'rxjs';
 
 import { ProductosService, Producto } from '../../services/productos.service';
+import { ClientesService } from '../../services/clientes.service';
 
 interface ItemPresupuesto {
   productoId: number;
@@ -45,6 +46,22 @@ interface ItemPresupuesto {
           <span>No hay productos cargados en el catálogo. Cargá productos desde la sección "Productos" antes de generar un presupuesto.</span>
         </div>
       }
+
+      <div class="buscador-dni-presupuesto pantalla-only">
+        <div class="campo">
+          <label for="presupuesto-dni">Buscar cliente por DNI</label>
+          <div class="dni-input-row">
+            <input id="presupuesto-dni" class="form-input" type="text" inputmode="numeric" maxlength="8"
+              placeholder="Ej. 30111222" #dniInput (keyup.enter)="buscarPorDni(dniInput.value)">
+            <button type="button" class="btn-buscar-dni" [disabled]="buscandoDni()" (click)="buscarPorDni(dniInput.value)" aria-label="Buscar por DNI">
+              <mat-icon>badge</mat-icon>
+            </button>
+          </div>
+          @if (errorBusquedaDni(); as msg) {
+            <span class="dni-error">{{ msg }}</span>
+          }
+        </div>
+      </div>
 
       <div class="datos-cliente pantalla-only">
         <div class="campo">
@@ -190,6 +207,31 @@ interface ItemPresupuesto {
       text-transform: uppercase;
       letter-spacing: 0.03em;
     }
+
+    .buscador-dni-presupuesto {
+      background: var(--slate);
+      border: 1px solid var(--border-dim);
+      border-radius: var(--radius-md);
+      padding: 20px 24px;
+    }
+    .buscador-dni-presupuesto .campo { max-width: 320px; }
+    .dni-input-row { display: flex; gap: 8px; }
+    .dni-input-row .form-input { flex: 1; }
+    .btn-buscar-dni {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 42px;
+      flex-shrink: 0;
+      border: 1px solid var(--border-dim);
+      background: transparent;
+      color: var(--signal);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+    }
+    .btn-buscar-dni:hover:not(:disabled) { background: rgba(0, 174, 239, 0.08); }
+    .btn-buscar-dni:disabled { color: var(--ash); cursor: not-allowed; }
+    .dni-error { font-size: 0.78rem; color: var(--danger); }
 
     .search-field { width: 100%; }
     .muted-text { color: var(--ash); font-size: 0.85em; }
@@ -364,6 +406,7 @@ interface ItemPresupuesto {
 })
 export class PresupuestoComponent implements OnInit {
   private productosService = inject(ProductosService);
+  private clientesService = inject(ClientesService);
   private snackBar = inject(MatSnackBar);
 
   fechaEmision = new Date();
@@ -373,6 +416,8 @@ export class PresupuestoComponent implements OnInit {
   items = signal<ItemPresupuesto[]>([]);
   productosFiltrados = signal<Producto[]>([]);
   catalogoVacio = signal(false);
+  buscandoDni = signal(false);
+  errorBusquedaDni = signal<string | null>(null);
 
   searchControl = new FormControl('');
   private searchQuery = toSignal(this.searchControl.valueChanges, { initialValue: '' });
@@ -414,6 +459,27 @@ export class PresupuestoComponent implements OnInit {
 
   inputValue(event: Event): string {
     return (event.target as HTMLInputElement).value;
+  }
+
+  buscarPorDni(dniRaw: string) {
+    const dni = dniRaw.trim();
+    if (!dni || this.buscandoDni()) return;
+
+    this.buscandoDni.set(true);
+    this.errorBusquedaDni.set(null);
+
+    this.clientesService.buscarPorDni(dni).subscribe({
+      next: (res) => {
+        this.buscandoDni.set(false);
+        this.nombreCliente.set(res.data.nombre);
+      },
+      error: (err) => {
+        this.buscandoDni.set(false);
+        this.errorBusquedaDni.set(
+          err?.status === 404 ? 'No se encontró ningún cliente con ese DNI' : 'Error al buscar el cliente'
+        );
+      }
+    });
   }
 
   agregarProducto(event: MatAutocompleteSelectedEvent) {

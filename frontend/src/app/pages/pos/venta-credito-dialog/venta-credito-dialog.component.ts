@@ -183,14 +183,16 @@ import { CreditoPosInput } from '../../../services/order.service';
 })
 export class VentaCreditoDialogComponent {
   dialogRef = inject(MatDialogRef<VentaCreditoDialogComponent>);
-  data = inject(MAT_DIALOG_DATA) as { total: number };
+  data = inject(MAT_DIALOG_DATA) as { total: number; clienteInicial?: ClienteConEstadoCrediticio | null };
   private clientesService = inject(ClientesService);
 
   readonly fechaMinima = new Date().toISOString().split('T')[0];
 
   isBuscando = signal(false);
   errorBusqueda = signal<string | null>(null);
-  clienteEncontrado = signal<ClienteConEstadoCrediticio | null>(null);
+  // Si el cajero ya asoció un cliente en la pantalla del POS, se precarga
+  // acá para no obligarlo a buscarlo dos veces (igual puede cambiarlo).
+  clienteEncontrado = signal<ClienteConEstadoCrediticio | null>(this.data.clienteInicial ?? null);
 
   cantidadCuotas = signal(3);
   frecuencia = signal<'semanal' | 'mensual'>('mensual');

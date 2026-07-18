@@ -2,12 +2,11 @@ import { Component, inject, signal } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { AuthService } from '../../services/auth.service';
-import { BuscadorDniComponent } from '../buscador-dni/buscador-dni.component';
 
 @Component({
   selector: 'app-layout',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, MatIconModule, BuscadorDniComponent],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, MatIconModule],
   template: `
     <div class="admin-shell">
       @if (sidebarOpen()) {
@@ -55,7 +54,6 @@ import { BuscadorDniComponent } from '../buscador-dni/buscador-dni.component';
             <span class="greeting">{{ authService.currentUser()?.nombre }}</span>
             <span class="role">{{ authService.currentUser()?.rol }}</span>
           </div>
-          <app-buscador-dni class="topbar-buscador"></app-buscador-dni>
           <button (click)="logout()" class="btn-danger">Cerrar sesión</button>
         </header>
 
@@ -200,7 +198,6 @@ import { BuscadorDniComponent } from '../buscador-dni/buscador-dni.component';
 
       .topbar { padding: 0 16px; }
       .greeting { display: none; }
-      .topbar-buscador { display: none; }
       .admin-content { padding: 16px; }
     }
   `]

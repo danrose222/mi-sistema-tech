@@ -7,6 +7,7 @@ import { MatDialog } from '@angular/material/dialog';
 
 import { ProductosService, Producto } from '../../services/productos.service';
 import { OrderService, CreditoPosInput } from '../../services/order.service';
+import { ClientesService, ClienteConEstadoCrediticio } from '../../services/clientes.service';
 import { PedidoDetalleComponent } from '../pedidos/pedido-detalle/pedido-detalle.component';
 import { PagoMixtoDialogComponent, DesglosePago } from './pago-mixto-dialog/pago-mixto-dialog.component';
 import { VentaCreditoDialogComponent } from './venta-credito-dialog/venta-credito-dialog.component';
@@ -59,6 +60,36 @@ interface ItemTicket {
           <button type="button" class="btn-vaciar" [disabled]="ticket().length === 0" (click)="vaciarTicket()">
             <mat-icon>delete_sweep</mat-icon> Vaciar
           </button>
+        </div>
+
+        <div class="cliente-panel">
+          @if (clienteAsociado(); as c) {
+            <div class="cliente-chip">
+              <mat-icon>person</mat-icon>
+              <span>{{ c.nombre }}</span>
+              <button type="button" class="btn-quitar-cliente" (click)="quitarCliente()" aria-label="Quitar cliente">
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
+          } @else {
+            <div class="cliente-busqueda">
+              <mat-icon class="cliente-busqueda-icon">badge</mat-icon>
+              <input
+                #dniClienteInput
+                class="cliente-dni-input"
+                type="text"
+                inputmode="numeric"
+                maxlength="8"
+                placeholder="DNI del cliente (opcional)"
+                (keyup.enter)="buscarCliente(dniClienteInput.value)">
+              <button type="button" class="btn-buscar-cliente" [disabled]="buscandoCliente()" (click)="buscarCliente(dniClienteInput.value)" aria-label="Buscar cliente">
+                <mat-icon>search</mat-icon>
+              </button>
+            </div>
+            @if (errorBusquedaCliente(); as msg) {
+              <span class="cliente-error">{{ msg }}</span>
+            }
+          }
         </div>
 
         <div class="ticket-tabla-wrapper">
@@ -246,6 +277,76 @@ interface ItemTicket {
     .btn-vaciar:disabled { opacity: 0.4; cursor: not-allowed; }
     .btn-vaciar mat-icon { font-size: 16px; width: 16px; height: 16px; }
 
+    /* ── Cliente asociado (opcional) ─────────── */
+    .cliente-panel { padding: 0 24px; }
+    .cliente-busqueda {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-dim);
+      border-radius: var(--radius-sm);
+      padding: 0 6px 0 12px;
+      height: 40px;
+    }
+    .cliente-busqueda-icon { color: var(--ash); font-size: 20px; width: 20px; height: 20px; flex-shrink: 0; }
+    .cliente-dni-input {
+      flex: 1;
+      min-width: 0;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--white);
+      font-size: 0.9rem;
+      font-family: var(--font-body);
+    }
+    .cliente-dni-input::placeholder { color: var(--ash); }
+    .btn-buscar-cliente {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      border: none;
+      background: transparent;
+      color: var(--signal);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .btn-buscar-cliente:hover:not(:disabled) { background: rgba(0, 174, 239, 0.1); }
+    .btn-buscar-cliente:disabled { color: var(--ash); cursor: not-allowed; }
+    .cliente-error { display: block; margin-top: 6px; font-size: 0.78rem; color: var(--danger); }
+
+    .cliente-chip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(34, 197, 94, 0.08);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      border-radius: var(--radius-sm);
+      padding: 8px 10px 8px 12px;
+      color: var(--success);
+      font-size: 0.9rem;
+    }
+    .cliente-chip mat-icon:first-child { font-size: 18px; width: 18px; height: 18px; flex-shrink: 0; }
+    .cliente-chip span { flex: 1; font-weight: 600; }
+    .btn-quitar-cliente {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border: none;
+      background: transparent;
+      color: var(--success);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .btn-quitar-cliente:hover { background: rgba(34, 197, 94, 0.15); }
+    .btn-quitar-cliente mat-icon { font-size: 16px; width: 16px; height: 16px; }
+
     .ticket-tabla-wrapper { overflow-x: auto; min-height: 200px; }
     .ticket-tabla { width: 100%; border-collapse: collapse; }
     .ticket-tabla th {
@@ -348,12 +449,20 @@ export class PosComponent implements AfterViewInit {
 
   private productosService = inject(ProductosService);
   private orderService = inject(OrderService);
+  private clientesService = inject(ClientesService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
 
   ticket = signal<ItemTicket[]>([]);
   isProcessing = signal(false);
   ultimoEscaneado = signal<{ mensaje: string; error: boolean } | null>(null);
+
+  // Cliente opcional: asocia la venta (cualquier método de pago) a un
+  // cliente real de la base para trazabilidad de garantía/IMEI, sin
+  // obligarlo en una venta de mostrador anónima.
+  clienteAsociado = signal<ClienteConEstadoCrediticio | null>(null);
+  buscandoCliente = signal(false);
+  errorBusquedaCliente = signal<string | null>(null);
 
   total = computed(() => this.ticket().reduce((suma, item) => suma + item.precioUnitario * item.cantidad, 0));
 
@@ -460,6 +569,33 @@ export class PosComponent implements AfterViewInit {
     this.ticket.update((actual) => actual.filter((item) => item.id !== id));
   }
 
+  buscarCliente(dniRaw: string) {
+    const dni = dniRaw.trim();
+    if (!dni || this.buscandoCliente()) return;
+
+    this.buscandoCliente.set(true);
+    this.errorBusquedaCliente.set(null);
+
+    this.clientesService.buscarPorDni(dni).subscribe({
+      next: (res) => {
+        this.clienteAsociado.set(res.data);
+        this.buscandoCliente.set(false);
+        this.enfocarInput();
+      },
+      error: (err) => {
+        this.buscandoCliente.set(false);
+        this.errorBusquedaCliente.set(
+          err?.status === 404 ? 'No se encontró ningún cliente con ese DNI' : 'Error al buscar el cliente'
+        );
+      }
+    });
+  }
+
+  quitarCliente() {
+    this.clienteAsociado.set(null);
+    this.errorBusquedaCliente.set(null);
+  }
+
   vaciarTicket() {
     this.ticket.set([]);
     this.ultimoEscaneado.set(null);
@@ -490,7 +626,7 @@ export class PosComponent implements AfterViewInit {
 
     const dialogRef = this.dialog.open(VentaCreditoDialogComponent, {
       width: '460px',
-      data: { total: this.total() }
+      data: { total: this.total(), clienteInicial: this.clienteAsociado() }
     });
 
     dialogRef.afterClosed().subscribe((credito: CreditoPosInput | undefined) => {
@@ -516,6 +652,7 @@ export class PosComponent implements AfterViewInit {
         this.snackBar.open(`Venta a crédito registrada: ${credito.cantidadCuotas} cuotas de ${this.formatearMonto(res.financiacion.monto_por_cuota)}`, 'Cerrar', { duration: 5000 });
         this.ticket.set([]);
         this.ultimoEscaneado.set(null);
+        this.clienteAsociado.set(null);
         this.isProcessing.set(false);
         this.enfocarInput();
 
@@ -542,7 +679,7 @@ export class PosComponent implements AfterViewInit {
       imei_serie: item.imei ?? null
     }));
 
-    this.orderService.crearVentaPos(items, desglosePago).subscribe({
+    this.orderService.crearVentaPos(items, desglosePago, this.clienteAsociado()?.id ?? null).subscribe({
       next: (res) => {
         const mensaje = res.vuelto > 0
           ? `Venta registrada. Vuelto: ${this.formatearMonto(res.vuelto)}`
@@ -550,6 +687,7 @@ export class PosComponent implements AfterViewInit {
         this.snackBar.open(mensaje, 'Cerrar', { duration: 4000 });
         this.ticket.set([]);
         this.ultimoEscaneado.set(null);
+        this.clienteAsociado.set(null);
         this.isProcessing.set(false);
         this.enfocarInput();
 
