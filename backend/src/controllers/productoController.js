@@ -53,6 +53,9 @@ function normalizarBody(req) {
   if (typeof body.activo === 'string') {
     body.activo = body.activo !== 'false' && body.activo !== '0';
   }
+  if (typeof body.requiere_imei === 'string') {
+    body.requiere_imei = body.requiere_imei !== 'false' && body.requiere_imei !== '0';
+  }
   return body;
 }
 

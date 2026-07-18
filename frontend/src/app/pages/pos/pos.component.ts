@@ -10,12 +10,15 @@ import { OrderService, CreditoPosInput } from '../../services/order.service';
 import { PedidoDetalleComponent } from '../pedidos/pedido-detalle/pedido-detalle.component';
 import { PagoMixtoDialogComponent, DesglosePago } from './pago-mixto-dialog/pago-mixto-dialog.component';
 import { VentaCreditoDialogComponent } from './venta-credito-dialog/venta-credito-dialog.component';
+import { ImeiDialogComponent } from './imei-dialog/imei-dialog.component';
 
 interface ItemTicket {
+  id: string;
   productoId: number;
   nombre: string;
   precioUnitario: number;
   cantidad: number;
+  imei?: string;
 }
 
 @Component({
@@ -70,14 +73,19 @@ interface ItemTicket {
               </tr>
             </thead>
             <tbody>
-              @for (item of ticket(); track item.productoId) {
+              @for (item of ticket(); track item.id) {
                 <tr>
-                  <td>{{ item.nombre }}</td>
+                  <td>
+                    {{ item.nombre }}
+                    @if (item.imei) {
+                      <div class="item-imei">IMEI: {{ item.imei }}</div>
+                    }
+                  </td>
                   <td class="col-num">{{ item.cantidad }}</td>
                   <td class="col-num">{{ item.precioUnitario | currency:'ARS' }}</td>
                   <td class="col-num">{{ (item.precioUnitario * item.cantidad) | currency:'ARS' }}</td>
                   <td class="col-accion">
-                    <button type="button" class="btn-quitar" (click)="quitarItem(item.productoId)" aria-label="Quitar producto">
+                    <button type="button" class="btn-quitar" (click)="quitarItem(item.id)" aria-label="Quitar producto">
                       <mat-icon>close</mat-icon>
                     </button>
                   </td>
@@ -256,6 +264,7 @@ interface ItemTicket {
       color: var(--white);
       border-bottom: 1px solid var(--border-dim);
     }
+    .item-imei { font-size: 0.75rem; color: var(--ash); margin-top: 2px; }
     .col-num { text-align: right; }
     .col-accion { width: 40px; text-align: center; }
     .btn-quitar {
@@ -383,13 +392,22 @@ export class PosComponent implements AfterViewInit {
       return;
     }
 
-    const yaExiste = this.ticket().some((item) => item.productoId === producto.id);
+    // Celulares (o cualquier producto marcado con requiere_imei): no se suma
+    // directo al ticket. Cada unidad física tiene su propio IMEI, así que
+    // cada una es su propia línea (nunca se fusiona por cantidad).
+    if (producto.requiere_imei) {
+      this.solicitarImei(producto);
+      return;
+    }
+
+    const yaExiste = this.ticket().find((item) => item.productoId === producto.id);
     if (yaExiste) {
       this.ticket.update((actual) =>
-        actual.map((item) => item.productoId === producto.id ? { ...item, cantidad: item.cantidad + 1 } : item)
+        actual.map((item) => item.id === yaExiste.id ? { ...item, cantidad: item.cantidad + 1 } : item)
       );
     } else {
       this.ticket.update((actual) => [...actual, {
+        id: this.generarIdLinea(),
         productoId: producto.id,
         nombre: producto.nombre,
         precioUnitario: Number(producto.precio),
@@ -400,8 +418,46 @@ export class PosComponent implements AfterViewInit {
     this.ultimoEscaneado.set({ mensaje: `${producto.nombre} agregado al ticket`, error: false });
   }
 
-  quitarItem(productoId: number) {
-    this.ticket.update((actual) => actual.filter((item) => item.productoId !== productoId));
+  private solicitarImei(producto: Producto) {
+    const dialogRef = this.dialog.open(ImeiDialogComponent, {
+      width: '440px',
+      data: { productoNombre: producto.nombre }
+    });
+
+    dialogRef.afterClosed().subscribe((imei: string | undefined) => {
+      this.enfocarInput();
+
+      if (!imei) {
+        this.ultimoEscaneado.set({ mensaje: `Se canceló la carga de IMEI para "${producto.nombre}"`, error: true });
+        return;
+      }
+
+      // Evita cargar el mismo IMEI dos veces en el mismo ticket (doble
+      // lectura accidental del lector láser).
+      if (this.ticket().some((item) => item.imei === imei)) {
+        this.ultimoEscaneado.set({ mensaje: `El IMEI ${imei} ya está en el ticket`, error: true });
+        this.snackBar.open(`El IMEI ${imei} ya fue agregado a esta venta`, 'Cerrar', { duration: 4000 });
+        return;
+      }
+
+      this.ticket.update((actual) => [...actual, {
+        id: this.generarIdLinea(),
+        productoId: producto.id,
+        nombre: producto.nombre,
+        precioUnitario: Number(producto.precio),
+        cantidad: 1,
+        imei
+      }]);
+      this.ultimoEscaneado.set({ mensaje: `${producto.nombre} (IMEI ${imei}) agregado al ticket`, error: false });
+    });
+  }
+
+  private generarIdLinea(): string {
+    return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  }
+
+  quitarItem(id: string) {
+    this.ticket.update((actual) => actual.filter((item) => item.id !== id));
   }
 
   vaciarTicket() {
@@ -451,7 +507,8 @@ export class PosComponent implements AfterViewInit {
 
     const items = this.ticket().map((item) => ({
       producto_id: item.productoId,
-      cantidad: item.cantidad
+      cantidad: item.cantidad,
+      imei_serie: item.imei ?? null
     }));
 
     this.orderService.crearVentaCredito(items, credito).subscribe({
@@ -481,7 +538,8 @@ export class PosComponent implements AfterViewInit {
 
     const items = this.ticket().map((item) => ({
       producto_id: item.productoId,
-      cantidad: item.cantidad
+      cantidad: item.cantidad,
+      imei_serie: item.imei ?? null
     }));
 
     this.orderService.crearVentaPos(items, desglosePago).subscribe({

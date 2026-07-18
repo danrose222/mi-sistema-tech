@@ -11,6 +11,7 @@ export interface Producto {
   precio: number;
   stock: number;
   activo: boolean | number;
+  requiere_imei: boolean | number;
   imagenes?: string[];
 }
 

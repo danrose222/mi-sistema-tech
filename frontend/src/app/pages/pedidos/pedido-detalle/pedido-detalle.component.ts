@@ -80,7 +80,12 @@ import { ConfirmarDevolucionDialogComponent } from './confirmar-devolucion-dialo
               <tbody>
                 @for (item of pedido()?.items; track item.id) {
                   <tr>
-                    <td>{{ item.producto_nombre }}</td>
+                    <td>
+                      {{ item.producto_nombre }}
+                      @if (item.imei_serie) {
+                        <div class="item-imei">IMEI: {{ item.imei_serie }}</div>
+                      }
+                    </td>
                     <td>{{ item.cantidad }}</td>
                     <td>{{ item.precio_unitario | currency:'ARS' }}</td>
                     <td>{{ item.cantidad * item.precio_unitario | currency:'ARS' }}</td>
@@ -184,6 +189,7 @@ import { ConfirmarDevolucionDialogComponent } from './confirmar-devolucion-dialo
     .items-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
     .items-table th { text-align: left; color: #64748b; font-weight: 500; padding: 8px 4px; border-bottom: 1px solid #e2e8f0; }
     .items-table td { padding: 8px 4px; border-bottom: 1px solid #f1f5f9; color: #111; }
+    .item-imei { font-size: 0.78rem; color: #64748b; margin-top: 2px; }
     .footer-info { margin-top: 12px; font-size: 0.85rem; color: #64748b; }
     .total-row {
       display: flex;
@@ -281,6 +287,7 @@ import { ConfirmarDevolucionDialogComponent } from './confirmar-devolucion-dialo
 
       .info-card { background: #fff !important; }
       .items-table th, .items-table td { color: #000 !important; border-color: #333 !important; }
+      .item-imei { color: #333 !important; }
       .footer-info { color: #000 !important; }
       .total-row { border-top: 2px solid #000 !important; color: #000 !important; }
       .total-value { font-size: 1.3rem; }

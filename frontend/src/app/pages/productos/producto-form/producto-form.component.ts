@@ -116,6 +116,9 @@ import { ProductosService, Producto } from '../../../services/productos.service'
         </div>
 
         <mat-checkbox formControlName="activo">Producto activo (visible en el catálogo)</mat-checkbox>
+        <mat-checkbox formControlName="requiere_imei">
+          Requiere IMEI / N° de serie (celulares)
+        </mat-checkbox>
       </form>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
@@ -233,7 +236,8 @@ export class ProductoFormComponent implements OnDestroy {
     barcode: [this.data?.producto?.barcode || ''],
     precio: [this.data?.producto?.precio ?? '', [Validators.required, Validators.min(0)]],
     stock: [this.data?.producto?.stock ?? 0, [Validators.min(0)]],
-    activo: [this.data?.producto ? !!this.data.producto.activo : true]
+    activo: [this.data?.producto ? !!this.data.producto.activo : true],
+    requiere_imei: [this.data?.producto ? !!this.data.producto.requiere_imei : false]
   });
 
   generarCodigoInterno() {

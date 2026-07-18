@@ -5,6 +5,7 @@ import { Observable } from 'rxjs';
 export interface PedidoItemInput {
   producto_id: number;
   cantidad: number;
+  imei_serie?: string | null;
 }
 
 export interface PayerInput {
@@ -73,6 +74,7 @@ export interface PedidoItem {
   cantidad: number;
   precio_unitario: number;
   producto_nombre: string;
+  imei_serie?: string | null;
 }
 
 export interface PedidoDetalle extends Pedido {

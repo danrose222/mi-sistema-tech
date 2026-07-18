@@ -62,7 +62,7 @@ exports.obtenerFinanciacionPorPedido = async (pedido_id) => {
 
 exports.obtenerItemsPorPedido = async (pedido_id) => {
   const [rows] = await pool.query(
-    `SELECT pi.id, pi.producto_id, pi.cantidad, pi.precio_unitario, p.nombre AS producto_nombre
+    `SELECT pi.id, pi.producto_id, pi.cantidad, pi.precio_unitario, pi.imei_serie, p.nombre AS producto_nombre
      FROM pedido_items pi
      JOIN productos p ON p.id = pi.producto_id
      WHERE pi.pedido_id = ?`,

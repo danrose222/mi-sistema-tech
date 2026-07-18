@@ -259,7 +259,7 @@ const MARGEN_ERROR_MONTO = 0.01;
 // 'pendiente' ni por el cron de liberación de reservas de 48hs.
 exports.crearVentaPos = async (req, res) => {
   const pool = require('../config/database');
-  const { items, desglose_pago, metodo_pago, credito } = req.body;
+  const { items, desglose_pago, metodo_pago, credito, cliente_id } = req.body;
   const esVentaACredito = metodo_pago === 'credito_local';
 
   if (!items || !Array.isArray(items) || items.length === 0) {
@@ -269,6 +269,12 @@ exports.crearVentaPos = async (req, res) => {
     if (!Number.isInteger(item.producto_id) || !Number.isInteger(item.cantidad) || item.cantidad <= 0) {
       return res.status(400).json({ error: 'Cada item debe tener producto_id y cantidad (entero positivo) válidos' });
     }
+    if (item.imei_serie !== undefined && item.imei_serie !== null && typeof item.imei_serie !== 'string') {
+      return res.status(400).json({ error: 'El IMEI/N° de serie debe ser un texto' });
+    }
+  }
+  if (cliente_id !== undefined && cliente_id !== null && !Number.isInteger(cliente_id)) {
+    return res.status(400).json({ error: 'cliente_id inválido' });
   }
 
   let montos = null;
@@ -311,7 +317,7 @@ exports.crearVentaPos = async (req, res) => {
 
     const itemsVerificados = [];
     for (const item of items) {
-      const [rows] = await connection.query('SELECT id, nombre, precio, stock FROM productos WHERE id = ? FOR UPDATE', [item.producto_id]);
+      const [rows] = await connection.query('SELECT id, nombre, precio, stock, requiere_imei FROM productos WHERE id = ? FOR UPDATE', [item.producto_id]);
       if (rows.length === 0) {
         throw Object.assign(new Error(`El producto ${item.producto_id} no existe`), { statusCode: 400 });
       }
@@ -319,15 +325,35 @@ exports.crearVentaPos = async (req, res) => {
       if (producto.stock < item.cantidad) {
         throw Object.assign(new Error(`El producto ${item.producto_id} no tiene stock suficiente`), { statusCode: 400 });
       }
+      const imeiSerie = typeof item.imei_serie === 'string' ? item.imei_serie.trim() : '';
+      if (producto.requiere_imei && !imeiSerie) {
+        throw Object.assign(
+          new Error(`"${producto.nombre}" requiere IMEI/N° de serie para poder venderse`),
+          { statusCode: 400 }
+        );
+      }
       await connection.query('UPDATE productos SET stock = stock - ? WHERE id = ?', [item.cantidad, item.producto_id]);
       itemsVerificados.push({
         producto_id: producto.id,
         cantidad: item.cantidad,
-        precio_unitario: Number(producto.precio)
+        precio_unitario: Number(producto.precio),
+        imei_serie: imeiSerie || null
       });
     }
 
     const total = Math.round(itemsVerificados.reduce((sum, item) => sum + item.precio_unitario * item.cantidad, 0) * 100) / 100;
+
+    // Cliente opcional: se acepta en cualquier tipo de venta (no solo a
+    // crédito) para poder asociar la trazabilidad de IMEI/garantía a un
+    // cliente real, sin obligarlo en ventas de mostrador anónimas.
+    let clienteIdVerificado = null;
+    if (cliente_id) {
+      const [clientesRows] = await connection.query('SELECT id FROM clientes WHERE id = ?', [cliente_id]);
+      if (clientesRows.length === 0) {
+        throw Object.assign(new Error('El cliente especificado no existe'), { statusCode: 400 });
+      }
+      clienteIdVerificado = cliente_id;
+    }
 
     if (esVentaACredito) {
       // Validar el cliente ANTES de insertar el pedido: si no existe, evita
@@ -348,8 +374,8 @@ exports.crearVentaPos = async (req, res) => {
       );
       const pedidoId = result.insertId;
 
-      const values = itemsVerificados.map((item) => [pedidoId, item.producto_id, item.cantidad, item.precio_unitario]);
-      await connection.query('INSERT INTO pedido_items (pedido_id, producto_id, cantidad, precio_unitario) VALUES ?', [values]);
+      const values = itemsVerificados.map((item) => [pedidoId, item.producto_id, item.cantidad, item.precio_unitario, item.imei_serie]);
+      await connection.query('INSERT INTO pedido_items (pedido_id, producto_id, cantidad, precio_unitario, imei_serie) VALUES ?', [values]);
 
       // Reutiliza la lógica de creditos.service.js (misma que otorga un
       // crédito manual desde el módulo de Créditos) dentro de ESTA MISMA
@@ -420,13 +446,13 @@ exports.crearVentaPos = async (req, res) => {
     const efectivoAplicado = Math.round((montos.efectivo - vuelto) * 100) / 100;
 
     const [result] = await connection.query(
-      "INSERT INTO pedidos (cliente_id, total, metodo_pago, estado) VALUES (NULL, ?, 'efectivo_pos', 'pagado')",
-      [total]
+      "INSERT INTO pedidos (cliente_id, total, metodo_pago, estado) VALUES (?, ?, 'efectivo_pos', 'pagado')",
+      [clienteIdVerificado, total]
     );
     const pedidoId = result.insertId;
 
-    const values = itemsVerificados.map((item) => [pedidoId, item.producto_id, item.cantidad, item.precio_unitario]);
-    await connection.query('INSERT INTO pedido_items (pedido_id, producto_id, cantidad, precio_unitario) VALUES ?', [values]);
+    const values = itemsVerificados.map((item) => [pedidoId, item.producto_id, item.cantidad, item.precio_unitario, item.imei_serie]);
+    await connection.query('INSERT INTO pedido_items (pedido_id, producto_id, cantidad, precio_unitario, imei_serie) VALUES ?', [values]);
 
     // Un registro en `pagos` por cada método realmente aplicado a la venta
     // (no al vuelto): es lo que después suma el reporte de Caja Diaria.
