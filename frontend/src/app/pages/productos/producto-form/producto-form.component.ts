@@ -7,6 +7,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ProductosService, Producto } from '../../../services/productos.service';
 
@@ -21,7 +22,8 @@ import { ProductosService, Producto } from '../../../services/productos.service'
     MatInputModule,
     MatButtonModule,
     MatCheckboxModule,
-    MatIconModule
+    MatIconModule,
+    MatTooltipModule
   ],
   template: `
     <h2 mat-dialog-title>{{ isEdit ? 'Editar Producto' : 'Nuevo Producto' }}</h2>
@@ -49,6 +51,9 @@ import { ProductosService, Producto } from '../../../services/productos.service'
           <mat-form-field appearance="outline">
             <mat-label>Código de barras</mat-label>
             <input matInput formControlName="barcode">
+            <button matSuffix mat-icon-button type="button" (click)="generarCodigoInterno()" matTooltip="Generar código interno único">
+              <mat-icon>qr_code_2</mat-icon>
+            </button>
           </mat-form-field>
         </div>
 
@@ -230,6 +235,11 @@ export class ProductoFormComponent implements OnDestroy {
     stock: [this.data?.producto?.stock ?? 0, [Validators.min(0)]],
     activo: [this.data?.producto ? !!this.data.producto.activo : true]
   });
+
+  generarCodigoInterno() {
+    const codigo = `CEL-${Date.now()}`;
+    this.form.get('barcode')?.setValue(codigo);
+  }
 
   onFilesSelected(event: Event) {
     const input = event.target as HTMLInputElement;

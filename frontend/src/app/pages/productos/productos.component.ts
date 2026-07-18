@@ -16,6 +16,7 @@ import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 
 import { ProductosService, Producto } from '../../services/productos.service';
 import { ProductoFormComponent } from './producto-form/producto-form.component';
+import { EtiquetaProductoDialogComponent } from './etiqueta-producto-dialog/etiqueta-producto-dialog.component';
 
 @Component({
   selector: 'app-productos',
@@ -98,6 +99,9 @@ import { ProductoFormComponent } from './producto-form/producto-form.component';
           <ng-container matColumnDef="acciones">
             <th mat-header-cell *matHeaderCellDef class="actions-col"> Acciones </th>
             <td mat-cell *matCellDef="let p" class="actions-col">
+              <button mat-icon-button (click)="imprimirEtiqueta(p)" matTooltip="Imprimir etiqueta con código de barras">
+                <mat-icon>sell</mat-icon>
+              </button>
               <button mat-icon-button class="text-accent" (click)="abrirModalForm(p)" matTooltip="Editar producto">
                 <mat-icon>edit</mat-icon>
               </button>
@@ -191,7 +195,7 @@ import { ProductoFormComponent } from './producto-form/producto-form.component';
     table { width: 100%; }
     .fw-500 { font-weight: 500; }
     .muted { font-size: 0.8rem; color: #64748b; }
-    .actions-col { width: 120px; text-align: right; }
+    .actions-col { width: 160px; text-align: right; }
     .hover-row:hover { background-color: #f8fafc; }
     .text-accent { color: #0ea5e9; }
     .stock-badge {
@@ -281,6 +285,13 @@ export class ProductosComponent implements OnInit {
       if (resultado) {
         this.cargarDatos();
       }
+    });
+  }
+
+  imprimirEtiqueta(producto: Producto) {
+    this.dialog.open(EtiquetaProductoDialogComponent, {
+      width: '380px',
+      data: { producto }
     });
   }
 
