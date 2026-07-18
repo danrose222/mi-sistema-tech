@@ -224,6 +224,13 @@ describe('Módulo de Pagos (Webhook) Integración', () => {
             connection.release();
 
             expect(pedidos[0].estado).toBe('pagado');
+
+            // El estado del pedido se confirma ANTES de intentar el envío del
+            // comprobante (ver procesarPagoWebhook): esperar solo la condición
+            // de arriba deja una carrera con el intento de email, que corre
+            // después en la misma función async. Se espera la condición real
+            // que se afirma a continuación.
+            await esperarHasta(() => emailService.enviarComprobanteCompra.mock.calls.length > 0);
             expect(emailService.enviarComprobanteCompra).toHaveBeenCalledTimes(1);
         });
     });
