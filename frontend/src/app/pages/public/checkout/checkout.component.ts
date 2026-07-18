@@ -84,7 +84,11 @@ interface PedidoConfirmado {
                 <mat-form-field appearance="outline">
                   <mat-label>DNI</mat-label>
                   <input matInput formControlName="dni" inputmode="numeric" maxlength="8" placeholder="Sin puntos">
-                  <mat-error>DNI válido requerido (7 u 8 dígitos)</mat-error>
+                  @if (checkoutForm.get('dni')?.hasError('required')) {
+                    <mat-error>El DNI es obligatorio para procesar la facturación</mat-error>
+                  } @else if (checkoutForm.get('dni')?.hasError('pattern')) {
+                    <mat-error>El DNI debe contener solo números (7 u 8 dígitos)</mat-error>
+                  }
                 </mat-form-field>
 
                 <mat-form-field appearance="outline">

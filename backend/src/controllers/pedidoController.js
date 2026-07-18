@@ -118,7 +118,7 @@ async function buscarOCrearClientePorDni(connection, { dni, nombre, telefono, em
 
 exports.crearPedido = async (req, res) => {
   const pool = require('../config/database');
-  const { cliente_id, items, payer } = req.body;
+  const { items, payer } = req.body;
   const metodo_pago = req.body.metodo_pago || 'mercado_pago';
 
   if (!items || !Array.isArray(items) || items.length === 0) {
@@ -131,6 +131,16 @@ exports.crearPedido = async (req, res) => {
   }
   if (!METODOS_PAGO_VALIDOS.includes(metodo_pago)) {
     return res.status(400).json({ error: 'Método de pago inválido' });
+  }
+
+  // DNI obligatorio: garantiza la facturación fiscal (AFIP) y asegura que
+  // todo pedido web quede asociado a un cliente real de la base unificada.
+  const dni = payer && payer.dni != null ? String(payer.dni).trim() : '';
+  if (!dni) {
+    return res.status(400).json({ error: 'El DNI es obligatorio' });
+  }
+  if (!/^\d{7,8}$/.test(dni)) {
+    return res.status(400).json({ error: 'El DNI debe contener solo números (7 u 8 dígitos)' });
   }
 
   const connection = await pool.getConnection();
@@ -160,20 +170,14 @@ exports.crearPedido = async (req, res) => {
       });
     }
 
-    // 1.5 CRM unificado: si no vino un cliente_id ya resuelto (ej. cliente logueado)
-    // pero sí un DNI, se busca/crea el cliente en la base general del local.
-    let clienteIdFinal = cliente_id || null;
-    if (!clienteIdFinal && payer?.dni) {
-      const dni = String(payer.dni).trim();
-      if (dni) {
-        clienteIdFinal = await buscarOCrearClientePorDni(connection, {
-          dni,
-          nombre: payer.name,
-          telefono: payer.phone?.number,
-          email: payer.email
-        });
-      }
-    }
+    // 1.5 CRM unificado: el DNI (ya validado como obligatorio arriba) es la
+    // llave con la que se busca o crea el cliente en la base general del local.
+    const clienteIdFinal = await buscarOCrearClientePorDni(connection, {
+      dni,
+      nombre: payer.name,
+      telefono: payer.phone?.number,
+      email: payer.email
+    });
 
     // 2. Crear pedido con el total calculado a partir del precio verificado en BD
     const total = itemsVerificados.reduce((sum, item) => sum + item.precio_unitario * item.cantidad, 0);

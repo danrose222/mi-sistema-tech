@@ -75,7 +75,7 @@ describe('CRM unificado: auto-registro por DNI y buscador rápido', () => {
             expect(clientes[0].nombre).toBe('Cliente Viejo'); // no pisa los datos existentes
         });
 
-        it('Debería crear el pedido sin cliente asociado si no se envía DNI (compatibilidad)', async () => {
+        it('Debería fallar con Error 400 si no se envía DNI (obligatorio para facturación fiscal)', async () => {
             const data = {
                 metodo_pago: 'transferencia',
                 items: [{ producto_id: productoId, cantidad: 1 }],
@@ -83,10 +83,24 @@ describe('CRM unificado: auto-registro por DNI y buscador rápido', () => {
             };
 
             const res = await request(app).post('/api/pedidos').send(data);
-            expect(res.statusCode).toBe(201);
+            expect(res.statusCode).toBe(400);
+            expect(res.body.error).toMatch(/dni/i);
 
-            const [pedidos] = await pool.query('SELECT cliente_id FROM pedidos WHERE id = ?', [res.body.pedido_id]);
-            expect(pedidos[0].cliente_id).toBeNull();
+            // No debe haber descontado stock ni creado el pedido (rollback / corte temprano)
+            const [productos] = await pool.query('SELECT stock FROM productos WHERE id = ?', [productoId]);
+            expect(productos[0].stock).toBe(10);
+        });
+
+        it('Debería fallar con Error 400 si el DNI está vacío', async () => {
+            const data = {
+                metodo_pago: 'transferencia',
+                items: [{ producto_id: productoId, cantidad: 1 }],
+                payer: { email: 'dnivacio@test.com', dni: '   ' }
+            };
+
+            const res = await request(app).post('/api/pedidos').send(data);
+            expect(res.statusCode).toBe(400);
+            expect(res.body.error).toMatch(/dni/i);
         });
     });
 

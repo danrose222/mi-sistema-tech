@@ -44,7 +44,7 @@ describe('Módulo de Pedidos Integración', () => {
                 items: [
                     { producto_id: productoStockId, cantidad: 2, precio_unitario: 1000, nombre: 'Producto Stock' }
                 ],
-                payer: { email: 'test@test.com' }
+                payer: { email: 'test@test.com', dni: '30111111' }
             };
 
             const res = await request(app)
@@ -68,7 +68,8 @@ describe('Módulo de Pedidos Integración', () => {
                 cliente_id: clienteId,
                 items: [
                     { producto_id: productoStockId, cantidad: 15, precio_unitario: 1000, nombre: 'Producto Stock' }
-                ]
+                ],
+                payer: { email: 'test@test.com', dni: '30111111' }
             };
 
             const res = await request(app).post('/api/pedidos').send(data);
@@ -88,7 +89,8 @@ describe('Módulo de Pedidos Integración', () => {
                 cliente_id: clienteId,
                 items: [
                     { producto_id: 9999, cantidad: 1, precio_unitario: 1000, nombre: 'Fantasma' }
-                ]
+                ],
+                payer: { email: 'test@test.com', dni: '30111111' }
             };
 
             const res = await request(app).post('/api/pedidos').send(data);
@@ -102,7 +104,8 @@ describe('Módulo de Pedidos Integración', () => {
                 cliente_id: clienteId,
                 items: [
                     { producto_id: productoNoStockId, cantidad: 1, precio_unitario: 1000, nombre: 'No Stock' }
-                ]
+                ],
+                payer: { email: 'test@test.com', dni: '30111111' }
             };
 
             const res = await request(app).post('/api/pedidos').send(data);
@@ -114,7 +117,7 @@ describe('Módulo de Pedidos Integración', () => {
             const data = {
                 cliente_id: clienteId,
                 items: [{ producto_id: productoStockId, cantidad: 1, precio_unitario: 1000, nombre: 'Producto Stock' }],
-                payer: { email: 'test@test.com' }
+                payer: { email: 'test@test.com', dni: '30111111' }
             };
 
             const res = await request(app).post('/api/pedidos').send(data);
@@ -132,7 +135,7 @@ describe('Módulo de Pedidos Integración', () => {
                 cliente_id: clienteId,
                 metodo_pago: 'transferencia',
                 items: [{ producto_id: productoStockId, cantidad: 1, precio_unitario: 1000, nombre: 'Producto Stock' }],
-                payer: { email: 'test@test.com' }
+                payer: { email: 'test@test.com', dni: '30111111' }
             };
 
             const res = await request(app).post('/api/pedidos').send(data);
@@ -159,7 +162,7 @@ describe('Módulo de Pedidos Integración', () => {
                 cliente_id: clienteId,
                 metodo_pago: 'efectivo_local',
                 items: [{ producto_id: productoStockId, cantidad: 1, precio_unitario: 1000, nombre: 'Producto Stock' }],
-                payer: { email: 'test@test.com' }
+                payer: { email: 'test@test.com', dni: '30111111' }
             };
 
             const res = await request(app).post('/api/pedidos').send(data);
@@ -174,12 +177,39 @@ describe('Módulo de Pedidos Integración', () => {
             const data = {
                 cliente_id: clienteId,
                 metodo_pago: 'bitcoin',
-                items: [{ producto_id: productoStockId, cantidad: 1, precio_unitario: 1000, nombre: 'Producto Stock' }]
+                items: [{ producto_id: productoStockId, cantidad: 1, precio_unitario: 1000, nombre: 'Producto Stock' }],
+                payer: { email: 'test@test.com', dni: '30111111' }
             };
 
             const res = await request(app).post('/api/pedidos').send(data);
 
             expect(res.statusCode).toBe(400);
+        });
+
+        it('Debería fallar con Error 400 si no se envía DNI (obligatorio para facturación fiscal)', async () => {
+            const data = {
+                cliente_id: clienteId,
+                items: [{ producto_id: productoStockId, cantidad: 1, precio_unitario: 1000, nombre: 'Producto Stock' }],
+                payer: { email: 'test@test.com' }
+            };
+
+            const res = await request(app).post('/api/pedidos').send(data);
+
+            expect(res.statusCode).toBe(400);
+            expect(res.body.error).toMatch(/dni/i);
+        });
+
+        it('Debería fallar con Error 400 si el DNI tiene caracteres no numéricos', async () => {
+            const data = {
+                cliente_id: clienteId,
+                items: [{ producto_id: productoStockId, cantidad: 1, precio_unitario: 1000, nombre: 'Producto Stock' }],
+                payer: { email: 'test@test.com', dni: '30.111.111' }
+            };
+
+            const res = await request(app).post('/api/pedidos').send(data);
+
+            expect(res.statusCode).toBe(400);
+            expect(res.body.error).toMatch(/dni/i);
         });
     });
 });
