@@ -248,6 +248,17 @@ import { ConfirmarDevolucionDialogComponent } from './confirmar-devolucion-dialo
        overlay. Eso se resuelve globalmente en styles.css (ver clase
        body.imprimiendo-comprobante), disparada por imprimirComprobante().
        Acá solo se define cómo se ve el contenido propio del comprobante. */
+
+    /* Sin @page margin:0, Chrome/Edge en Windows imprimen con su margen de
+       página por defecto (~1.27cm) más el encabezado/pie con URL y fecha:
+       en un ticket térmico angosto eso deja el comprobante descentrado o
+       recortado. No se fija el tamaño de página: el ancho real depende de
+       la impresora térmica de cada local (58mm/80mm) o de si se imprime
+       en hoja A4. */
+    @page {
+      margin: 0;
+    }
+
     @media print {
       :host { display: block; }
       .pantalla-only { display: none !important; }

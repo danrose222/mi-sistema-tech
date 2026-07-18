@@ -75,6 +75,16 @@ import { Producto } from '../../../services/productos.service';
       color: #0f172a;
     }
 
+    /* Sin esto, Chrome/Edge en Windows reservan su propio margen de página
+       (~1.27cm) para el encabezado/pie con URL y fecha que agregan por
+       default: en una impresora térmica de 50x25mm ese margen por sí solo ya
+       excede el largo de la etiqueta y la corta o la manda a una segunda
+       hoja en blanco. size fija el ancho/alto exacto de la etiqueta. */
+    @page {
+      size: 50mm 25mm;
+      margin: 0;
+    }
+
     @media print {
       :host { display: block; }
       .pantalla-only { display: none !important; }
