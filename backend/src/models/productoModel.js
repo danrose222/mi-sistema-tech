@@ -129,3 +129,33 @@ exports.actualizarProducto = async (id, producto) => {
 exports.eliminarProducto = async (id) => {
   await pool.query('DELETE FROM productos WHERE id = ?', [id]);
 };
+
+// Usado por la importación desde Excel para detectar SKU/barcode que ya
+// existen en la base antes de insertar (además del chequeo de duplicados
+// dentro del propio archivo, que se hace en el controller).
+exports.obtenerSkusYBarcodesExistentes = async () => {
+  const [rows] = await pool.query(
+    'SELECT sku, barcode FROM productos WHERE sku IS NOT NULL OR barcode IS NOT NULL'
+  );
+  return {
+    skus: new Set(rows.map((r) => r.sku).filter(Boolean)),
+    barcodes: new Set(rows.map((r) => r.barcode).filter(Boolean))
+  };
+};
+
+exports.crearProductosBulk = async (connection, productos) => {
+  const valores = productos.map((p) => [
+    p.nombre,
+    p.descripcion || null,
+    p.sku || null,
+    p.barcode || null,
+    p.precio,
+    p.stock,
+    p.requiere_imei ? 1 : 0
+  ]);
+  const [result] = await connection.query(
+    'INSERT INTO productos (nombre, descripcion, sku, barcode, precio, stock, requiere_imei) VALUES ?',
+    [valores]
+  );
+  return result;
+};

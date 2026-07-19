@@ -42,3 +42,32 @@ exports.uploadProductoImagen = (req, res, next) => {
     next();
   });
 };
+
+// El Excel de importación no se guarda en disco: se procesa en memoria y se
+// descarta apenas se insertan los productos, así que usa memoryStorage en
+// vez del diskStorage de las imágenes.
+const EXCEL_MIMETYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
+const uploadExcel = multer({
+  storage: multer.memoryStorage(),
+  fileFilter: (req, file, cb) => {
+    const esXlsx = file.mimetype === EXCEL_MIMETYPE || file.originalname.toLowerCase().endsWith('.xlsx');
+    if (!esXlsx) {
+      return cb(new Error('Formato no soportado. Subí un archivo .xlsx (Excel).'));
+    }
+    cb(null, true);
+  },
+  limits: { fileSize: 5 * 1024 * 1024 } // 5MB alcanza de sobra para un listado de productos
+}).single('archivo');
+
+exports.uploadExcelProductos = (req, res, next) => {
+  uploadExcel(req, res, (err) => {
+    if (err) {
+      return res.status(400).json({ success: false, error: err.message });
+    }
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: 'Debe adjuntar un archivo .xlsx' });
+    }
+    next();
+  });
+};

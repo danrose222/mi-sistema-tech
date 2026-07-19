@@ -17,6 +17,7 @@ import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { ProductosService, Producto } from '../../services/productos.service';
 import { ProductoFormComponent } from './producto-form/producto-form.component';
 import { EtiquetaProductoDialogComponent } from './etiqueta-producto-dialog/etiqueta-producto-dialog.component';
+import { ImportarErroresDialogComponent } from './importar-errores-dialog/importar-errores-dialog.component';
 
 @Component({
   selector: 'app-productos',
@@ -40,9 +41,18 @@ import { EtiquetaProductoDialogComponent } from './etiqueta-producto-dialog/etiq
     <div class="page-container">
       <div class="header-container">
         <h2 class="page-title">Gestión de Productos</h2>
-        <button mat-flat-button color="primary" class="btn-nuevo" (click)="abrirModalForm()">
-          <mat-icon>add</mat-icon> Nuevo Producto
-        </button>
+        <div class="header-acciones">
+          <button mat-stroked-button (click)="descargarPlantilla()" matTooltip="Descargar plantilla .xlsx con las columnas esperadas">
+            <mat-icon>download</mat-icon> Plantilla
+          </button>
+          <button mat-stroked-button (click)="archivoInput.click()" [disabled]="importando()">
+            <mat-icon>upload_file</mat-icon> {{ importando() ? 'Importando...' : 'Importar Excel' }}
+          </button>
+          <input #archivoInput type="file" accept=".xlsx" hidden (change)="onArchivoSeleccionado($event)">
+          <button mat-flat-button color="primary" class="btn-nuevo" (click)="abrirModalForm()">
+            <mat-icon>add</mat-icon> Nuevo Producto
+          </button>
+        </div>
       </div>
 
       <div class="filters-container">
@@ -151,6 +161,7 @@ import { EtiquetaProductoDialogComponent } from './etiqueta-producto-dialog/etiq
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
     .page-title { margin: 0; color: #1e293b; font-weight: 600; }
+    .header-acciones { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .filters-container { display: flex; margin-top: 8px; }
     .search-field { width: 100%; max-width: 450px; }
     /* El buscador vive sobre el fondo oscuro de la página (--void), no dentro
@@ -233,6 +244,7 @@ export class ProductosComponent implements OnInit {
   pageSize = signal<number>(20);
   pageIndex = signal<number>(0);
   isLoading = signal<boolean>(false);
+  importando = signal<boolean>(false);
 
   searchControl = new FormControl('');
 
@@ -292,6 +304,49 @@ export class ProductosComponent implements OnInit {
     this.dialog.open(EtiquetaProductoDialogComponent, {
       width: '380px',
       data: { producto }
+    });
+  }
+
+  descargarPlantilla() {
+    this.productosService.descargarPlantillaImportacion().subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'plantilla-productos.xlsx';
+        a.click();
+        window.URL.revokeObjectURL(url);
+      },
+      error: (err) => {
+        console.error(err);
+        this.snackBar.open('Error al descargar la plantilla', 'Cerrar', { duration: 4000 });
+      }
+    });
+  }
+
+  onArchivoSeleccionado(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const archivo = input.files?.[0];
+    input.value = ''; // permite volver a elegir el mismo archivo si se corrige y reintenta
+    if (!archivo) return;
+
+    this.importando.set(true);
+    this.productosService.importarExcel(archivo).subscribe({
+      next: (res) => {
+        this.importando.set(false);
+        this.snackBar.open(`Se importaron ${res.data.creados} producto(s) correctamente`, 'Cerrar', { duration: 5000 });
+        this.cargarDatos();
+      },
+      error: (err) => {
+        this.importando.set(false);
+        this.dialog.open(ImportarErroresDialogComponent, {
+          width: '500px',
+          data: {
+            mensaje: err?.error?.error || 'No se pudo importar el archivo',
+            errores: err?.error?.errores
+          }
+        });
+      }
     });
   }
 

@@ -63,4 +63,14 @@ export class ProductosService {
   eliminar(id: number): Observable<{ success: boolean }> {
     return this.http.delete<{ success: boolean }>(`${this.apiUrl}/${id}`);
   }
+
+  importarExcel(archivo: File): Observable<{ success: boolean; data: { creados: number } }> {
+    const formData = new FormData();
+    formData.append('archivo', archivo);
+    return this.http.post<{ success: boolean; data: { creados: number } }>(`${this.apiUrl}/importar`, formData);
+  }
+
+  descargarPlantillaImportacion(): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/importar/plantilla`, { responseType: 'blob' });
+  }
 }
