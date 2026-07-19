@@ -2,12 +2,17 @@ const request = require('supertest');
 const app = require('../../src/app');
 const pool = require('../../src/config/database');
 
+// Los offsets se anclan al mediodía de HOY (no a NOW()) para que "hace 1
+// hora" siempre caiga dentro del mismo día calendario sin importar a qué
+// hora real corra la suite: con NOW() como ancla, correr los tests entre las
+// 00:00 y la 01:00 hace que "hace 1 hora" cruce la medianoche y caiga en el
+// día anterior, rompiendo la comparación con CURDATE() en el controller.
 async function crearPedidoConPagos({ estado, total, pagos, fechaOffsetHoras = 0, reembolsadoOffsetHoras = null }) {
     const connection = await pool.getConnection();
     try {
         const [pedido] = await connection.query(
             `INSERT INTO pedidos (cliente_id, total, estado, metodo_pago, created_at)
-             VALUES (NULL, ?, ?, 'efectivo_pos', DATE_SUB(NOW(), INTERVAL ? HOUR))`,
+             VALUES (NULL, ?, ?, 'efectivo_pos', DATE_SUB(TIMESTAMP(CURDATE(), '12:00:00'), INTERVAL ? HOUR))`,
             [total, estado, fechaOffsetHoras]
         );
         const pedidoId = pedido.insertId;
@@ -21,7 +26,7 @@ async function crearPedidoConPagos({ estado, total, pagos, fechaOffsetHoras = 0,
 
         if (reembolsadoOffsetHoras !== null) {
             await connection.query(
-                'UPDATE pedidos SET reembolsado_en = DATE_SUB(NOW(), INTERVAL ? HOUR) WHERE id = ?',
+                "UPDATE pedidos SET reembolsado_en = DATE_SUB(TIMESTAMP(CURDATE(), '12:00:00'), INTERVAL ? HOUR) WHERE id = ?",
                 [reembolsadoOffsetHoras, pedidoId]
             );
         }
