@@ -9,11 +9,11 @@ Es un monorepo con una API backend (Node.js + Express + MySQL) y dos frentes Ang
 | Módulo | Qué resuelve |
 | --- | --- |
 | **Caja (POS)** | Venta de mostrador con lector de código de barras, pagos mixtos (efectivo + tarjeta + transferencia), venta a crédito con generación automática de cuotas, y control obligatorio de IMEI/N° de serie para la venta de celulares. |
-| **Inventario** | Alta y edición de productos con imágenes, control de stock con historial de movimientos, generación de códigos de barras internos e impresión de etiquetas adhesivas. |
-| **Créditos** | Financiación propia "con solo DNI": wizard de otorgamiento, cronograma de cuotas semanal/mensual, registro de pagos, cuenta corriente por cliente y aviso automático por WhatsApp cuando se acredita un pago. |
-| **Clientes (CRM)** | Base de clientes unificada entre la venta online y la de mostrador (por DNI), con buscador rápido y alerta de estado crediticio en los puntos donde se necesita — Caja, Créditos y Presupuestos. |
+| **Inventario** | Alta y edición de productos con imágenes, importación masiva desde Excel (con plantilla descargable y validación fila por fila), control de stock con historial de movimientos, generación de códigos de barras internos con tamaño/cantidad de etiqueta configurable e impresión de etiquetas adhesivas. |
+| **Créditos** | Financiación propia "con solo DNI": wizard de otorgamiento, cronograma de cuotas semanal/mensual, registro de pagos, cuenta corriente por cliente y aviso automático por WhatsApp cuando se acredita un pago. Bloquea créditos nuevos a clientes marcados como morosos por deuda histórica hasta que la regularicen. |
+| **Clientes (CRM)** | Base de clientes unificada entre la venta online y la de mostrador (por DNI), con buscador rápido, estado crediticio (Al día / Moroso) y seguimiento de deuda histórica migrada de sistemas anteriores, con cobro registrado en Caja Diaria. |
 | **Cobranzas** | Cron diario que revisa cuotas por vencer o vencidas y envía recordatorios de pago por WhatsApp, con envío manual también disponible desde el detalle del crédito. |
-| **Catálogo público** | Storefront con SSR, sincronizado en tiempo real con el stock del panel, carrito y checkout con MercadoPago, transferencia o efectivo en local. |
+| **Catálogo público** | Storefront con SSR, sincronizado en tiempo real con el stock del panel, carrito con retiro en local o envío a domicilio (envío gratis desde $100.000, costo fijo por debajo) y checkout con MercadoPago, transferencia o efectivo en local. |
 
 ## Stack Tecnológico
 
