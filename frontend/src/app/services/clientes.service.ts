@@ -2,6 +2,8 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
+export type EstadoCliente = 'AL_DIA' | 'MOROSO';
+
 export interface Cliente {
   id: number;
   nombre: string;
@@ -12,6 +14,7 @@ export interface Cliente {
   notas: string;
   historial_crediticio: string;
   deuda_historica: number;
+  estado_cliente: EstadoCliente;
   created_at: string;
 }
 
@@ -67,9 +70,9 @@ export class ClientesService {
     return this.http.delete<{success: boolean}>(`${this.apiUrl}/${id}`);
   }
 
-  pagarDeudaHistorica(id: number, montoPagado: number): Observable<{success: boolean, data: { id: number; deuda_historica: number }}> {
-    return this.http.put<{success: boolean, data: { id: number; deuda_historica: number }}>(
-      `${this.apiUrl}/${id}/pagar-deuda-historica`,
+  pagarDeudaHistorica(id: number, montoPagado: number): Observable<{success: boolean, data: { id: number; deuda_historica: number; estado_cliente: EstadoCliente }}> {
+    return this.http.put<{success: boolean, data: { id: number; deuda_historica: number; estado_cliente: EstadoCliente }}>(
+      `${this.apiUrl}/${id}/pagar-deuda`,
       { monto_pagado: montoPagado }
     );
   }

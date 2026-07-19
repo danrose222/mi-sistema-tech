@@ -1,5 +1,23 @@
 const Cliente = require('../models/clienteModel');
 
+// Valida y normaliza estado_cliente/deuda_historica antes de persistir: un
+// cliente MOROSO necesita una deuda_historica > 0 (si no, no hay nada que
+// regularizar) y uno AL_DIA nunca debe cargar deuda, sin importar lo que
+// haya llegado en el body (defensa server-side, más allá del formulario).
+function normalizarEstadoCliente(body) {
+    const estado_cliente = body.estado_cliente === 'MOROSO' ? 'MOROSO' : 'AL_DIA';
+
+    if (estado_cliente === 'MOROSO') {
+        const deuda_historica = Number(body.deuda_historica);
+        if (!Number.isFinite(deuda_historica) || deuda_historica <= 0) {
+            return { error: 'Un cliente MOROSO debe tener una deuda_historica mayor a cero' };
+        }
+        return { ...body, estado_cliente, deuda_historica };
+    }
+
+    return { ...body, estado_cliente, deuda_historica: 0 };
+}
+
 const clienteController = {
     listarClientes: async (req, res) => {
         try {
@@ -70,7 +88,12 @@ const clienteController = {
                 return res.status(400).json({ success: false, error: 'El teléfono es requerido para poder enviar recordatorios por WhatsApp' });
             }
 
-            const nuevoCliente = await Cliente.crear(req.body);
+            const datosCliente = normalizarEstadoCliente(req.body);
+            if (datosCliente.error) {
+                return res.status(400).json({ success: false, error: datosCliente.error });
+            }
+
+            const nuevoCliente = await Cliente.crear(datosCliente);
             const cliente = await Cliente.obtenerPorId(nuevoCliente.insertId);
             res.status(201).json({ success: true, data: cliente });
         } catch (error) {
@@ -84,7 +107,12 @@ const clienteController = {
             const existente = await Cliente.obtenerPorId(req.params.id);
             if (!existente) return res.status(404).json({ success: false, error: 'Cliente no encontrado' });
 
-            await Cliente.actualizar(req.params.id, req.body);
+            const datosCliente = normalizarEstadoCliente(req.body);
+            if (datosCliente.error) {
+                return res.status(400).json({ success: false, error: datosCliente.error });
+            }
+
+            await Cliente.actualizar(req.params.id, datosCliente);
             const cliente = await Cliente.obtenerPorId(req.params.id);
             res.json({ success: true, data: cliente });
         } catch (error) {
@@ -109,7 +137,8 @@ const clienteController = {
     // y lo asienta en caja_movimientos con un concepto explícito, para que el
     // dinero aparezca en Caja Diaria sin mezclarse con `pedidos` (que representa
     // ventas reales, no cobros de una deuda que ya existía antes del sistema).
-    pagarDeudaHistorica: async (req, res) => {
+    // Cuando la deuda llega a 0, estado_cliente vuelve a AL_DIA automáticamente.
+    pagarDeuda: async (req, res) => {
         const pool = require('../config/database');
         const clienteId = req.params.id;
         const monto = Number(req.body.monto_pagado);
@@ -145,11 +174,15 @@ const clienteController = {
             }
 
             const nuevaDeuda = Math.max(0, Math.round((deudaActual - monto) * 100) / 100);
-            await connection.query('UPDATE clientes SET deuda_historica = ? WHERE id = ?', [nuevaDeuda, clienteId]);
+            const nuevoEstado = nuevaDeuda === 0 ? 'AL_DIA' : 'MOROSO';
+            await connection.query(
+                'UPDATE clientes SET deuda_historica = ?, estado_cliente = ? WHERE id = ?',
+                [nuevaDeuda, nuevoEstado, clienteId]
+            );
 
             await connection.query(
                 `INSERT INTO caja_movimientos (cliente_id, tipo, concepto, monto, usuario_id)
-                 VALUES (?, 'ingreso', 'Ingreso por cobro de deuda histórica', ?, ?)`,
+                 VALUES (?, 'ingreso', 'Ingreso por deuda histórica', ?, ?)`,
                 [clienteId, monto, req.user ? req.user.id : null]
             );
 
@@ -157,7 +190,7 @@ const clienteController = {
             transactionActive = false;
             connection.release();
 
-            res.json({ success: true, data: { id: Number(clienteId), deuda_historica: nuevaDeuda } });
+            res.json({ success: true, data: { id: Number(clienteId), deuda_historica: nuevaDeuda, estado_cliente: nuevoEstado } });
         } catch (err) {
             if (transactionActive) {
                 await connection.rollback();

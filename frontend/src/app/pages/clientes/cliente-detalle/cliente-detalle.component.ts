@@ -59,7 +59,7 @@ import { PagoDeudaHistoricaDialogComponent } from '../pago-deuda-historica-dialo
 
           <div class="info-card">
             <h3>Deuda Histórica</h3>
-            @if ((cliente()?.deuda_historica ?? 0) > 0) {
+            @if (cliente()?.estado_cliente === 'MOROSO') {
               <div class="deuda-alerta">
                 <mat-icon>report</mat-icon>
                 <div class="deuda-alerta-body">
@@ -217,13 +217,13 @@ export class ClienteDetalleComponent implements OnInit {
       data: { clienteId: clienteActual.id, deudaActual: clienteActual.deuda_historica }
     });
 
-    dialogRef.afterClosed().subscribe((resultado: { id: number; deuda_historica: number } | undefined) => {
+    dialogRef.afterClosed().subscribe((resultado: { id: number; deuda_historica: number; estado_cliente: 'AL_DIA' | 'MOROSO' } | undefined) => {
       if (!resultado) return;
 
       // Se actualiza el signal local en vez de refetchear: el backend ya
       // confirmó el nuevo saldo, y así el badge/botón se actualizan al
       // instante sin una segunda ida y vuelta al servidor.
-      this.cliente.update((actual) => actual ? { ...actual, deuda_historica: resultado.deuda_historica } : actual);
+      this.cliente.update((actual) => actual ? { ...actual, deuda_historica: resultado.deuda_historica, estado_cliente: resultado.estado_cliente } : actual);
       this.snackBar.open('Pago registrado correctamente', 'Cerrar', { duration: 4000 });
     });
   }

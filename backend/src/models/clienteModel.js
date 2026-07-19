@@ -26,19 +26,19 @@ const Cliente = {
     },
 
     crear: async (datosCliente) => {
-        const { nombre, telefono, email, direccion, notas, dni, deuda_historica } = datosCliente;
+        const { nombre, telefono, email, direccion, notas, dni, deuda_historica, estado_cliente } = datosCliente;
         const [result] = await db.query(
-            'INSERT INTO clientes (nombre, telefono, email, direccion, notas, dni, deuda_historica) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            [nombre, telefono || null, email || null, direccion || null, notas || null, dni || null, Number(deuda_historica) || 0]
+            'INSERT INTO clientes (nombre, telefono, email, direccion, notas, dni, deuda_historica, estado_cliente) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            [nombre, telefono || null, email || null, direccion || null, notas || null, dni || null, Number(deuda_historica) || 0, estado_cliente === 'MOROSO' ? 'MOROSO' : 'AL_DIA']
         );
         return result;
     },
 
     actualizar: async (id, datosCliente) => {
-        const { nombre, telefono, email, direccion, notas, dni, deuda_historica } = datosCliente;
+        const { nombre, telefono, email, direccion, notas, dni, deuda_historica, estado_cliente } = datosCliente;
         const [result] = await db.query(
-            'UPDATE clientes SET nombre = ?, telefono = ?, email = ?, direccion = ?, notas = ?, dni = ?, deuda_historica = ? WHERE id = ?',
-            [nombre, telefono || null, email || null, direccion || null, notas || null, dni || null, Number(deuda_historica) || 0, id]
+            'UPDATE clientes SET nombre = ?, telefono = ?, email = ?, direccion = ?, notas = ?, dni = ?, deuda_historica = ?, estado_cliente = ? WHERE id = ?',
+            [nombre, telefono || null, email || null, direccion || null, notas || null, dni || null, Number(deuda_historica) || 0, estado_cliente === 'MOROSO' ? 'MOROSO' : 'AL_DIA', id]
         );
         return result;
     },

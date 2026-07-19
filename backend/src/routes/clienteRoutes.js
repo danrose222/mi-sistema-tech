@@ -12,7 +12,7 @@ router.get('/:id', clienteController.obtenerCliente);
 router.post('/', clienteController.registrarCliente);
 
 router.put('/:id', clienteController.actualizarCliente);
-router.put('/:id/pagar-deuda-historica', clienteController.pagarDeudaHistorica);
+router.put('/:id/pagar-deuda', clienteController.pagarDeuda);
 
 router.delete('/:id', clienteController.eliminarCliente);
 

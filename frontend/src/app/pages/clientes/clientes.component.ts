@@ -75,11 +75,6 @@ import { ClienteDetalleComponent } from './cliente-detalle/cliente-detalle.compo
                   <mat-icon>verified</mat-icon> Cliente Cumplidor
                 </span>
               }
-              @if (element.deuda_historica > 0) {
-                <span class="badge-deuda" matTooltip="Deuda migrada de un sistema anterior, pendiente de cobro">
-                  <mat-icon>report</mat-icon> DEUDA HISTÓRICA: {{ element.deuda_historica | currency:'ARS' }}
-                </span>
-              }
             </td>
           </ng-container>
 
@@ -93,6 +88,23 @@ import { ClienteDetalleComponent } from './cliente-detalle/cliente-detalle.compo
           <ng-container matColumnDef="email">
             <th mat-header-cell *matHeaderCellDef> Email </th>
             <td mat-cell *matCellDef="let element"> {{element.email || '-'}} </td>
+          </ng-container>
+
+          <!-- Estado Column -->
+          <ng-container matColumnDef="estado">
+            <th mat-header-cell *matHeaderCellDef> Estado </th>
+            <td mat-cell *matCellDef="let element">
+              @if (element.estado_cliente === 'MOROSO') {
+                <span class="badge-estado badge-moroso" matTooltip="Deuda migrada de un sistema anterior, pendiente de cobro">
+                  <mat-icon>report</mat-icon> MOROSO
+                </span>
+                <div class="deuda-monto">Deuda: {{ element.deuda_historica | currency:'ARS' }}</div>
+              } @else {
+                <span class="badge-estado badge-al-dia">
+                  <mat-icon>check_circle</mat-icon> AL DÍA
+                </span>
+              }
+            </td>
           </ng-container>
 
           <!-- Acciones Column -->
@@ -116,7 +128,7 @@ import { ClienteDetalleComponent } from './cliente-detalle/cliente-detalle.compo
           
           <!-- Fila mostrada cuando no hay datos -->
           <tr class="mat-row" *matNoDataRow>
-            <td class="mat-cell empty-state" colspan="4">
+            <td class="mat-cell empty-state" colspan="5">
               <div class="empty-content">
                 <mat-icon class="empty-icon">group_off</mat-icon>
                 @if (searchControl.value) {
@@ -248,23 +260,33 @@ import { ClienteDetalleComponent } from './cliente-detalle/cliente-detalle.compo
       width: 14px;
       height: 14px;
     }
-    .badge-deuda {
+    .badge-estado {
       display: inline-flex;
       align-items: center;
       gap: 4px;
-      margin-left: 8px;
       padding: 2px 8px;
       border-radius: 12px;
       font-size: 0.7rem;
       font-weight: 700;
-      vertical-align: middle;
-      background: #fee2e2;
-      color: #b91c1c;
     }
-    .badge-deuda mat-icon {
+    .badge-estado mat-icon {
       font-size: 14px;
       width: 14px;
       height: 14px;
+    }
+    .badge-al-dia {
+      background: #dcfce7;
+      color: #15803d;
+    }
+    .badge-moroso {
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+    .deuda-monto {
+      margin-top: 4px;
+      font-size: 0.75rem;
+      color: #b91c1c;
+      font-weight: 600;
     }
     .actions-col {
       width: 160px;
@@ -300,7 +322,7 @@ export class ClientesComponent implements OnInit {
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
 
-  displayedColumns: string[] = ['nombre', 'telefono', 'email', 'acciones'];
+  displayedColumns: string[] = ['nombre', 'telefono', 'email', 'estado', 'acciones'];
   
   // Estado mediante Signals
   clientes = signal<Cliente[]>([]);

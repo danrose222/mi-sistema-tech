@@ -5,6 +5,7 @@ import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/materia
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
+import { MatRadioModule } from '@angular/material/radio';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ClientesService } from '../../../services/clientes.service';
 
@@ -12,12 +13,13 @@ import { ClientesService } from '../../../services/clientes.service';
   selector: 'app-cliente-form',
   standalone: true,
   imports: [
-    CommonModule, 
-    ReactiveFormsModule, 
-    MatDialogModule, 
-    MatFormFieldModule, 
-    MatInputModule, 
-    MatButtonModule
+    CommonModule,
+    ReactiveFormsModule,
+    MatDialogModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatButtonModule,
+    MatRadioModule
   ],
   template: `
     <h2 mat-dialog-title>{{ isEdit ? 'Editar Cliente' : 'Nuevo Cliente' }}</h2>
@@ -62,19 +64,31 @@ import { ClientesService } from '../../../services/clientes.service';
           <textarea matInput formControlName="direccion" rows="2" placeholder="Ej. Av. Corrientes 1234"></textarea>
         </mat-form-field>
 
+        <div class="estado-field">
+          <label class="estado-label">Estado del cliente</label>
+          <mat-radio-group formControlName="estado_cliente" class="estado-radio-group">
+            <mat-radio-button value="AL_DIA">Al día</mat-radio-button>
+            <mat-radio-button value="MOROSO">Moroso</mat-radio-button>
+          </mat-radio-group>
+        </div>
+
+        @if (form.get('estado_cliente')?.value === 'MOROSO') {
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Monto de deuda histórica</mat-label>
+            <span matTextPrefix>$&nbsp;</span>
+            <input matInput type="number" formControlName="deuda_historica" min="0.01" step="0.01">
+            <mat-hint>Saldo migrado de un sistema anterior, pendiente de cobro.</mat-hint>
+            @if (form.get('deuda_historica')?.hasError('required')) {
+              <mat-error>La deuda es requerida para un cliente moroso</mat-error>
+            } @else if (form.get('deuda_historica')?.hasError('min')) {
+              <mat-error>Debe ser mayor a cero</mat-error>
+            }
+          </mat-form-field>
+        }
+
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Notas adicionales</mat-label>
           <textarea matInput formControlName="notas" rows="3" placeholder="Información relevante del cliente..."></textarea>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Deuda histórica</mat-label>
-          <span matTextPrefix>$&nbsp;</span>
-          <input matInput type="number" formControlName="deuda_historica" min="0" step="0.01">
-          <mat-hint>Solo para clientes migrados de un sistema anterior con saldo pendiente. Dejar en 0 si no aplica.</mat-hint>
-          @if (form.get('deuda_historica')?.hasError('min')) {
-            <mat-error>No puede ser negativa</mat-error>
-          }
         </mat-form-field>
       </form>
     </mat-dialog-content>
@@ -95,6 +109,19 @@ import { ClientesService } from '../../../services/clientes.service';
     }
     .full-width {
       width: 100%;
+    }
+    .estado-field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .estado-label {
+      font-size: 0.75rem;
+      color: #555;
+    }
+    .estado-radio-group {
+      display: flex;
+      gap: 24px;
     }
   `]
 })
@@ -118,16 +145,40 @@ export class ClienteFormComponent {
     telefono: [this.data?.cliente?.telefono || '', [Validators.required, Validators.pattern(this.phonePattern)]],
     direccion: [this.data?.cliente?.direccion || ''],
     notas: [this.data?.cliente?.notas || ''],
+    estado_cliente: [this.data?.cliente?.estado_cliente || 'AL_DIA', Validators.required],
     deuda_historica: [this.data?.cliente?.deuda_historica ?? 0, [Validators.min(0)]]
   });
+
+  constructor() {
+    // La deuda solo es requerida (y > 0) cuando el cliente está marcado como
+    // moroso; al volver a "Al día" se limpia el monto para no arrastrar un
+    // valor viejo que ya no corresponde.
+    this.form.get('estado_cliente')?.valueChanges.subscribe((estado) => this.actualizarValidacionDeuda(estado));
+    this.actualizarValidacionDeuda(this.form.get('estado_cliente')?.value);
+  }
+
+  private actualizarValidacionDeuda(estado: string) {
+    const deudaControl = this.form.get('deuda_historica');
+    if (estado === 'MOROSO') {
+      deudaControl?.setValidators([Validators.required, Validators.min(0.01)]);
+    } else {
+      deudaControl?.setValue(0);
+      deudaControl?.setValidators([Validators.min(0)]);
+    }
+    deudaControl?.updateValueAndValidity();
+  }
 
   guardar() {
     if (this.form.invalid) return;
 
     this.isSaving = true;
+    const valorFormulario = {
+      ...this.form.value,
+      deuda_historica: this.form.value.estado_cliente === 'MOROSO' ? this.form.value.deuda_historica : 0
+    };
     const peticion = this.isEdit
-      ? this.clientesService.actualizar(this.data.cliente.id, this.form.value)
-      : this.clientesService.crear(this.form.value);
+      ? this.clientesService.actualizar(this.data.cliente.id, valorFormulario)
+      : this.clientesService.crear(valorFormulario);
 
     peticion.subscribe({
       next: () => {
