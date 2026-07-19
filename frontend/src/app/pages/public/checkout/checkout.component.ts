@@ -1,4 +1,5 @@
 import { Component, inject, signal, computed, PLATFORM_ID } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -152,11 +153,15 @@ interface PedidoConfirmado {
               <div class="summary-totals">
                 <div class="summary-row">
                   <span>Envío</span>
-                  <span class="free-shipping">Gratis</span>
+                  @if (costoEnvio() === 0) {
+                    <span class="free-shipping">Gratis</span>
+                  } @else {
+                    <span>{{ costoEnvio() | currency:'ARS' }}</span>
+                  }
                 </div>
                 <div class="summary-row total">
                   <span>Total a Pagar</span>
-                  <span>{{ carrito.totalPrecio() | currency:'ARS' }}</span>
+                  <span>{{ totalConEnvio() | currency:'ARS' }}</span>
                 </div>
               </div>
 
@@ -545,6 +550,27 @@ export class CheckoutComponent {
     direccion: [''],
     notas: ['']
   });
+
+  // Envío gratis a partir de este subtotal; por debajo, costo fijo temporal.
+  // La misma regla se recalcula en el backend (nunca se confía en lo que
+  // muestra el frontend para cobrar), así que si se cambia acá hay que
+  // cambiarla también en pedidoController.js.
+  private readonly UMBRAL_ENVIO_GRATIS = 100000;
+  private readonly COSTO_ENVIO_FIJO = 5000;
+
+  // El FormControl no es un signal: se puentea con toSignal para que
+  // costoEnvio/totalConEnvio se recalculen solos cuando cambia el método de
+  // entrega, igual que ya se recalculan cuando cambia el carrito.
+  private metodoEntregaValue = toSignal(this.checkoutForm.get('metodo_entrega')!.valueChanges, {
+    initialValue: this.checkoutForm.get('metodo_entrega')!.value as MetodoEntrega
+  });
+
+  costoEnvio = computed(() => {
+    if (this.metodoEntregaValue() !== 'envio_domicilio') return 0;
+    return this.carrito.totalPrecio() >= this.UMBRAL_ENVIO_GRATIS ? 0 : this.COSTO_ENVIO_FIJO;
+  });
+
+  totalConEnvio = computed(() => this.carrito.totalPrecio() + this.costoEnvio());
 
   constructor() {
     if (this.carrito.items().length === 0) {

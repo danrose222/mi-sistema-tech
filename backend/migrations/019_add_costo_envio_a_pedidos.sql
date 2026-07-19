@@ -1,0 +1,2 @@
+ALTER TABLE pedidos
+  ADD COLUMN costo_envio DECIMAL(10,2) NOT NULL DEFAULT 0.00;

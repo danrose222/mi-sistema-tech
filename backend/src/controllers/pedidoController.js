@@ -92,6 +92,12 @@ exports.procesarDevolucion = async (req, res) => {
 const METODOS_PAGO_VALIDOS = ['mercado_pago', 'transferencia', 'efectivo_local'];
 const METODOS_ENTREGA_VALIDOS = ['retiro_local', 'envio_domicilio'];
 
+// Envío gratis a partir de este subtotal; por debajo, costo fijo temporal.
+// Solo aplica cuando el cliente elige envío a domicilio: retirar en el local
+// nunca tiene costo de envío, sea cual sea el monto de la compra.
+const UMBRAL_ENVIO_GRATIS = 100000;
+const COSTO_ENVIO_FIJO = 5000;
+
 // CRM unificado: si la compra web trae DNI, la venta se asocia siempre a un
 // cliente de la base general (buscándolo o creándolo), en vez de quedar
 // "suelta" con solo cliente_email. Se hace con SELECT + INSERT (no INSERT
@@ -197,11 +203,18 @@ exports.crearPedido = async (req, res) => {
       email: payer.email
     });
 
-    // 2. Crear pedido con el total calculado a partir del precio verificado en BD
-    const total = itemsVerificados.reduce((sum, item) => sum + item.precio_unitario * item.cantidad, 0);
+    // 2. Crear pedido con el total calculado a partir del precio verificado en BD.
+    // El costo de envío nunca se toma del frontend: se recalcula acá con la
+    // misma regla (gratis desde $100.000, sino un fijo de $5.000) para que
+    // nadie pueda manipular el total pagado manipulando el request.
+    const subtotal = itemsVerificados.reduce((sum, item) => sum + item.precio_unitario * item.cantidad, 0);
+    const costo_envio = metodo_entrega === 'envio_domicilio' && subtotal < UMBRAL_ENVIO_GRATIS
+      ? COSTO_ENVIO_FIJO
+      : 0;
+    const total = subtotal + costo_envio;
     const [result] = await connection.query(
-      'INSERT INTO pedidos (cliente_id, total, metodo_pago, cliente_email, metodo_entrega, direccion_envio) VALUES (?, ?, ?, ?, ?, ?)',
-      [clienteIdFinal, total, metodo_pago, payer?.email || null, metodo_entrega, direccion_envio]
+      'INSERT INTO pedidos (cliente_id, total, costo_envio, metodo_pago, cliente_email, metodo_entrega, direccion_envio) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [clienteIdFinal, total, costo_envio, metodo_pago, payer?.email || null, metodo_entrega, direccion_envio]
     );
     const pedidoId = result.insertId;
 
@@ -225,6 +238,16 @@ exports.crearPedido = async (req, res) => {
         quantity: item.cantidad,
         currency_id: 'ARS'
       }));
+      // Si no se agrega como ítem propio, Mercado Pago solo cobraría el
+      // subtotal de productos y el costo de envío quedaría sin cobrarse.
+      if (costo_envio > 0) {
+        mpItems.push({
+          title: 'Costo de envío',
+          unit_price: costo_envio,
+          quantity: 1,
+          currency_id: 'ARS'
+        });
+      }
 
       const back_urls = {
         success: process.env.FRONTEND_SUCCESS_URL || 'http://localhost:4200/pago-exitoso',

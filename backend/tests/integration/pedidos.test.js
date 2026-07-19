@@ -15,9 +15,11 @@ describe('Módulo de Pedidos Integración', () => {
     let productoStockId;
     let productoNoStockId;
 
+    let productoCaroId;
+
     beforeEach(async () => {
         clienteId = await global.crearClienteHelper('Cliente Pedido');
-        
+
         const connection = await pool.getConnection();
         try {
             const [p1] = await connection.query(
@@ -31,6 +33,12 @@ describe('Módulo de Pedidos Integración', () => {
                 ['Producto Sin Stock', 'prod-sin-stock', 1000, 0]
             );
             productoNoStockId = p2.insertId;
+
+            const [p3] = await connection.query(
+                'INSERT INTO productos (nombre, sku, precio, stock) VALUES (?, ?, ?, ?)',
+                ['Producto Caro', 'prod-caro', 150000, 5]
+            );
+            productoCaroId = p3.insertId;
 
         } finally {
             connection.release();
@@ -289,6 +297,127 @@ describe('Módulo de Pedidos Integración', () => {
                 const [rows] = await pool.query('SELECT metodo_entrega, direccion_envio FROM pedidos WHERE id = ?', [res.body.pedido_id]);
                 expect(rows[0].metodo_entrega).toBe('envio_domicilio');
                 expect(rows[0].direccion_envio).toBe('Av. Siempre Viva 742');
+            });
+        });
+
+        describe('Costo de envío (gratis desde $100.000, sino $5.000 fijo)', () => {
+            it('Debería cobrar el costo de envío fijo si el subtotal es menor a $100.000 y hay envío a domicilio', async () => {
+                const data = {
+                    cliente_id: clienteId,
+                    metodo_entrega: 'envio_domicilio',
+                    direccion: 'Av. Siempre Viva 742',
+                    metodo_pago: 'transferencia',
+                    items: [{ producto_id: productoStockId, cantidad: 2, precio_unitario: 1000, nombre: 'Producto Stock' }],
+                    payer: { email: 'test@test.com', dni: '30111111' }
+                };
+
+                const res = await request(app).post('/api/pedidos').send(data);
+                expect(res.statusCode).toBe(201);
+
+                const [rows] = await pool.query('SELECT total, costo_envio FROM pedidos WHERE id = ?', [res.body.pedido_id]);
+                expect(Number(rows[0].costo_envio)).toBe(5000);
+                expect(Number(rows[0].total)).toBe(7000); // 2000 (subtotal) + 5000 (envío)
+            });
+
+            it('Debería dar envío gratis si el subtotal es mayor o igual a $100.000', async () => {
+                const data = {
+                    cliente_id: clienteId,
+                    metodo_entrega: 'envio_domicilio',
+                    direccion: 'Av. Siempre Viva 742',
+                    metodo_pago: 'transferencia',
+                    items: [{ producto_id: productoCaroId, cantidad: 1, precio_unitario: 150000, nombre: 'Producto Caro' }],
+                    payer: { email: 'test@test.com', dni: '30111111' }
+                };
+
+                const res = await request(app).post('/api/pedidos').send(data);
+                expect(res.statusCode).toBe(201);
+
+                const [rows] = await pool.query('SELECT total, costo_envio FROM pedidos WHERE id = ?', [res.body.pedido_id]);
+                expect(Number(rows[0].costo_envio)).toBe(0);
+                expect(Number(rows[0].total)).toBe(150000);
+            });
+
+            it('No debería cobrar envío en "retiro_local" aunque el subtotal sea bajo', async () => {
+                const data = {
+                    cliente_id: clienteId,
+                    metodo_entrega: 'retiro_local',
+                    metodo_pago: 'transferencia',
+                    items: [{ producto_id: productoStockId, cantidad: 2, precio_unitario: 1000, nombre: 'Producto Stock' }],
+                    payer: { email: 'test@test.com', dni: '30111111' }
+                };
+
+                const res = await request(app).post('/api/pedidos').send(data);
+                expect(res.statusCode).toBe(201);
+
+                const [rows] = await pool.query('SELECT total, costo_envio FROM pedidos WHERE id = ?', [res.body.pedido_id]);
+                expect(Number(rows[0].costo_envio)).toBe(0);
+                expect(Number(rows[0].total)).toBe(2000);
+            });
+
+            it('Debería ignorar cualquier total/costo_envio que mande el cliente y recalcularlo siempre en el backend', async () => {
+                const data = {
+                    cliente_id: clienteId,
+                    metodo_entrega: 'envio_domicilio',
+                    direccion: 'Av. Siempre Viva 742',
+                    metodo_pago: 'transferencia',
+                    total: 1,
+                    costo_envio: 0,
+                    items: [{ producto_id: productoStockId, cantidad: 2, precio_unitario: 999999, nombre: 'Producto Stock' }],
+                    payer: { email: 'test@test.com', dni: '30111111' }
+                };
+
+                const res = await request(app).post('/api/pedidos').send(data);
+                expect(res.statusCode).toBe(201);
+
+                const [rows] = await pool.query('SELECT total, costo_envio FROM pedidos WHERE id = ?', [res.body.pedido_id]);
+                // El precio_unitario enviado por el cliente (999999) se ignora: se usa
+                // el precio real del producto en la base (1000).
+                expect(Number(rows[0].costo_envio)).toBe(5000);
+                expect(Number(rows[0].total)).toBe(7000);
+            });
+
+            it('Debería incluir el costo de envío como ítem propio en la preferencia de Mercado Pago', async () => {
+                const mpService = require('../../src/services/mercadopagoService');
+                mpService.crearPreference.mockClear();
+
+                const data = {
+                    cliente_id: clienteId,
+                    metodo_entrega: 'envio_domicilio',
+                    direccion: 'Av. Siempre Viva 742',
+                    metodo_pago: 'mercado_pago',
+                    items: [{ producto_id: productoStockId, cantidad: 2, precio_unitario: 1000, nombre: 'Producto Stock' }],
+                    payer: { email: 'test@test.com', dni: '30111111' }
+                };
+
+                const res = await request(app).post('/api/pedidos').send(data);
+                expect(res.statusCode).toBe(201);
+
+                expect(mpService.crearPreference).toHaveBeenCalledTimes(1);
+                const itemsEnviados = mpService.crearPreference.mock.calls[0][0].items;
+                const itemEnvio = itemsEnviados.find((item) => item.title === 'Costo de envío');
+                expect(itemEnvio).toBeDefined();
+                expect(itemEnvio.unit_price).toBe(5000);
+            });
+
+            it('No debería agregar el ítem de envío a la preferencia de Mercado Pago si el envío es gratis', async () => {
+                const mpService = require('../../src/services/mercadopagoService');
+                mpService.crearPreference.mockClear();
+
+                const data = {
+                    cliente_id: clienteId,
+                    metodo_entrega: 'envio_domicilio',
+                    direccion: 'Av. Siempre Viva 742',
+                    metodo_pago: 'mercado_pago',
+                    items: [{ producto_id: productoCaroId, cantidad: 1, precio_unitario: 150000, nombre: 'Producto Caro' }],
+                    payer: { email: 'test@test.com', dni: '30111111' }
+                };
+
+                const res = await request(app).post('/api/pedidos').send(data);
+                expect(res.statusCode).toBe(201);
+
+                const itemsEnviados = mpService.crearPreference.mock.calls[0][0].items;
+                const itemEnvio = itemsEnviados.find((item) => item.title === 'Costo de envío');
+                expect(itemEnvio).toBeUndefined();
             });
         });
     });
