@@ -54,6 +54,16 @@ import { ConfirmarDevolucionDialogComponent } from './confirmar-devolucion-dialo
               <span class="value">{{ pedido()?.cliente_telefono || 'No registrado' }}</span>
             </div>
             <div class="info-row">
+              <span class="label">Entrega:</span>
+              <span class="value">{{ pedido()?.metodo_entrega === 'envio_domicilio' ? 'Envío a domicilio' : 'Retiro en local' }}</span>
+            </div>
+            @if (pedido()?.metodo_entrega === 'envio_domicilio') {
+              <div class="info-row">
+                <span class="label">Dirección:</span>
+                <span class="value">{{ pedido()?.direccion_envio || 'No informada' }}</span>
+              </div>
+            }
+            <div class="info-row">
               <span class="label">Estado:</span>
               <span class="badge" [class]="'estado-' + pedido()?.estado">{{ pedido()?.estado }}</span>
             </div>

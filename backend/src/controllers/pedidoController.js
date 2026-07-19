@@ -90,6 +90,7 @@ exports.procesarDevolucion = async (req, res) => {
 };
 
 const METODOS_PAGO_VALIDOS = ['mercado_pago', 'transferencia', 'efectivo_local'];
+const METODOS_ENTREGA_VALIDOS = ['retiro_local', 'envio_domicilio'];
 
 // CRM unificado: si la compra web trae DNI, la venta se asocia siempre a un
 // cliente de la base general (buscándolo o creándolo), en vez de quedar
@@ -134,6 +135,21 @@ exports.crearPedido = async (req, res) => {
   if (!METODOS_PAGO_VALIDOS.includes(metodo_pago)) {
     return res.status(400).json({ error: 'Método de pago inválido' });
   }
+
+  // metodo_entrega por defecto 'retiro_local' para no romper integraciones
+  // viejas (POS, tests) que nunca mandaron este campo. La dirección solo es
+  // obligatoria cuando el cliente pidió envío a domicilio; en retiro en local
+  // se descarta cualquier dirección que haya llegado, para no guardar un
+  // dato inconsistente con el método elegido.
+  const metodo_entrega = METODOS_ENTREGA_VALIDOS.includes(req.body.metodo_entrega)
+    ? req.body.metodo_entrega
+    : 'retiro_local';
+  const direccionRecibida = typeof req.body.direccion === 'string' ? req.body.direccion.trim() : '';
+
+  if (metodo_entrega === 'envio_domicilio' && !direccionRecibida) {
+    return res.status(400).json({ error: 'La dirección de envío es obligatoria para envío a domicilio' });
+  }
+  const direccion_envio = metodo_entrega === 'envio_domicilio' ? direccionRecibida : null;
 
   // DNI obligatorio: garantiza la facturación fiscal (AFIP) y asegura que
   // todo pedido web quede asociado a un cliente real de la base unificada.
@@ -184,8 +200,8 @@ exports.crearPedido = async (req, res) => {
     // 2. Crear pedido con el total calculado a partir del precio verificado en BD
     const total = itemsVerificados.reduce((sum, item) => sum + item.precio_unitario * item.cantidad, 0);
     const [result] = await connection.query(
-      'INSERT INTO pedidos (cliente_id, total, metodo_pago, cliente_email) VALUES (?, ?, ?, ?)',
-      [clienteIdFinal, total, metodo_pago, payer?.email || null]
+      'INSERT INTO pedidos (cliente_id, total, metodo_pago, cliente_email, metodo_entrega, direccion_envio) VALUES (?, ?, ?, ?, ?, ?)',
+      [clienteIdFinal, total, metodo_pago, payer?.email || null, metodo_entrega, direccion_envio]
     );
     const pedidoId = result.insertId;
 

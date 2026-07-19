@@ -16,6 +16,7 @@ export interface PayerInput {
 }
 
 export type MetodoPago = 'mercado_pago' | 'transferencia' | 'efectivo_local' | 'efectivo_pos' | 'credito_local';
+export type MetodoEntrega = 'retiro_local' | 'envio_domicilio';
 
 export interface DesglosePagoInput {
   efectivo: number;
@@ -44,6 +45,8 @@ export interface CrearPedidoInput {
   items: PedidoItemInput[];
   payer: PayerInput;
   metodo_pago: MetodoPago;
+  metodo_entrega?: MetodoEntrega;
+  direccion?: string | null;
 }
 
 export interface CrearPedidoResponse {
@@ -63,6 +66,8 @@ export interface Pedido {
   total: number;
   estado: EstadoPedido;
   metodo_pago: MetodoPago;
+  metodo_entrega?: MetodoEntrega;
+  direccion_envio?: string | null;
   pago_link: string | null;
   mercado_pago_preference_id: string | null;
   created_at: string;

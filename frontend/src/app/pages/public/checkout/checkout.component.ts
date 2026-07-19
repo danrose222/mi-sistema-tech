@@ -7,10 +7,11 @@ import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
+import { MatRadioModule } from '@angular/material/radio';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { CarritoService } from '../../../services/carrito.service';
-import { OrderService, MetodoPago } from '../../../services/order.service';
+import { OrderService, MetodoPago, MetodoEntrega } from '../../../services/order.service';
 
 interface OpcionMetodoPago {
   valor: MetodoPago;
@@ -35,7 +36,8 @@ interface PedidoConfirmado {
     MatInputModule,
     MatFormFieldModule,
     MatCardModule,
-    MatIconModule
+    MatIconModule,
+    MatRadioModule
   ],
   template: `
     <div class="page-container">
@@ -69,6 +71,16 @@ interface PedidoConfirmado {
 
       <div class="checkout-layout">
         <div class="checkout-form">
+          <mat-card class="mat-elevation-z2 metodo-entrega-card">
+            <mat-card-content>
+              <h3 class="metodo-entrega-heading">Método de Entrega</h3>
+              <mat-radio-group [formControl]="checkoutForm.controls.metodo_entrega" class="metodo-entrega-group">
+                <mat-radio-button value="retiro_local">Retiro en Local</mat-radio-button>
+                <mat-radio-button value="envio_domicilio">Envío a Domicilio</mat-radio-button>
+              </mat-radio-group>
+            </mat-card-content>
+          </mat-card>
+
           <mat-card class="mat-elevation-z2">
             <mat-card-header>
               <mat-card-title>Datos de Facturación y Envío</mat-card-title>
@@ -104,11 +116,13 @@ interface PedidoConfirmado {
                   <mat-error>Teléfono es requerido</mat-error>
                 </mat-form-field>
 
-                <mat-form-field appearance="outline" class="full-width">
-                  <mat-label>Dirección de Envío</mat-label>
-                  <input matInput formControlName="direccion">
-                  <mat-error>Dirección es requerida</mat-error>
-                </mat-form-field>
+                @if (checkoutForm.get('metodo_entrega')?.value === 'envio_domicilio') {
+                  <mat-form-field appearance="outline" class="full-width">
+                    <mat-label>Dirección de Envío</mat-label>
+                    <input matInput formControlName="direccion">
+                    <mat-error>Dirección es requerida</mat-error>
+                  </mat-form-field>
+                }
 
                 <mat-form-field appearance="outline" class="full-width">
                   <mat-label>Notas Adicionales (Opcional)</mat-label>
@@ -230,6 +244,29 @@ interface PedidoConfirmado {
       gap: 16px;
     }
     .full-width { grid-column: 1 / -1; width: 100%; }
+
+    .metodo-entrega-card { margin-bottom: 24px; }
+    .metodo-entrega-heading {
+      margin: 0 0 12px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--white);
+    }
+    .metodo-entrega-group {
+      display: flex;
+      gap: 24px;
+    }
+    .metodo-entrega-group ::ng-deep .mdc-form-field { color: var(--white); }
+    .metodo-entrega-group ::ng-deep .mdc-radio__outer-circle,
+    .metodo-entrega-group ::ng-deep .mdc-radio__inner-circle {
+      border-color: var(--ash) !important;
+    }
+    .metodo-entrega-group ::ng-deep .mat-mdc-radio-checked .mdc-radio__outer-circle {
+      border-color: var(--signal) !important;
+    }
+    .metodo-entrega-group ::ng-deep .mdc-radio__inner-circle {
+      border-color: var(--signal) !important;
+    }
 
     /* Los inputs viven en una mat-card transparente flotando sobre el fondo
        oscuro de la página: Material pinta el texto tipeado con el color de
@@ -504,7 +541,8 @@ export class CheckoutComponent {
     dni: ['', [Validators.required, Validators.pattern(/^\d{7,8}$/)]],
     email: ['', [Validators.required, Validators.email]],
     telefono: ['', Validators.required],
-    direccion: ['', Validators.required],
+    metodo_entrega: ['retiro_local' as MetodoEntrega, Validators.required],
+    direccion: [''],
     notas: ['']
   });
 
@@ -512,6 +550,20 @@ export class CheckoutComponent {
     if (this.carrito.items().length === 0) {
       this.router.navigate(['/carrito']);
     }
+
+    // "Retiro en Local" no necesita dirección: se saca el Validators.required
+    // y se limpia cualquier valor que haya quedado cargado. Al pasar a
+    // "Envío a Domicilio" pasa a ser obligatoria.
+    this.checkoutForm.get('metodo_entrega')?.valueChanges.subscribe((metodo) => {
+      const direccionControl = this.checkoutForm.get('direccion');
+      if (metodo === 'retiro_local') {
+        direccionControl?.clearValidators();
+        direccionControl?.setValue('');
+      } else {
+        direccionControl?.setValidators([Validators.required]);
+      }
+      direccionControl?.updateValueAndValidity();
+    });
   }
 
   pagar() {
@@ -519,7 +571,7 @@ export class CheckoutComponent {
 
     this.isProcessing.set(true);
 
-    const { nombre, dni, email, telefono } = this.checkoutForm.value;
+    const { nombre, dni, email, telefono, metodo_entrega, direccion } = this.checkoutForm.value;
     const pedido = {
       items: this.carrito.items().map(item => ({
         producto_id: item.id,
@@ -531,7 +583,9 @@ export class CheckoutComponent {
         phone: { number: telefono! },
         dni: dni!
       },
-      metodo_pago: this.metodoPago()
+      metodo_pago: this.metodoPago(),
+      metodo_entrega: metodo_entrega!,
+      direccion: metodo_entrega === 'envio_domicilio' ? direccion : null
     };
 
     this.orderService.crear(pedido).subscribe({

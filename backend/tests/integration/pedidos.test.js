@@ -211,5 +211,85 @@ describe('Módulo de Pedidos Integración', () => {
             expect(res.statusCode).toBe(400);
             expect(res.body.error).toMatch(/dni/i);
         });
+
+        describe('Método de entrega (retiro en local vs envío a domicilio)', () => {
+            it('Debería crear el pedido como "retiro_local" por defecto si no se envía metodo_entrega (compatibilidad)', async () => {
+                const data = {
+                    cliente_id: clienteId,
+                    items: [{ producto_id: productoStockId, cantidad: 1, precio_unitario: 1000, nombre: 'Producto Stock' }],
+                    payer: { email: 'test@test.com', dni: '30111111' }
+                };
+
+                const res = await request(app).post('/api/pedidos').send(data);
+                expect(res.statusCode).toBe(201);
+
+                const [rows] = await pool.query('SELECT metodo_entrega, direccion_envio FROM pedidos WHERE id = ?', [res.body.pedido_id]);
+                expect(rows[0].metodo_entrega).toBe('retiro_local');
+                expect(rows[0].direccion_envio).toBeNull();
+            });
+
+            it('Debería permitir "retiro_local" sin dirección aunque se mande una vacía', async () => {
+                const data = {
+                    cliente_id: clienteId,
+                    metodo_entrega: 'retiro_local',
+                    direccion: '',
+                    items: [{ producto_id: productoStockId, cantidad: 1, precio_unitario: 1000, nombre: 'Producto Stock' }],
+                    payer: { email: 'test@test.com', dni: '30111111' }
+                };
+
+                const res = await request(app).post('/api/pedidos').send(data);
+                expect(res.statusCode).toBe(201);
+            });
+
+            it('Debería descartar la dirección enviada si el método de entrega es "retiro_local"', async () => {
+                const data = {
+                    cliente_id: clienteId,
+                    metodo_entrega: 'retiro_local',
+                    direccion: 'Calle que no debería guardarse 123',
+                    items: [{ producto_id: productoStockId, cantidad: 1, precio_unitario: 1000, nombre: 'Producto Stock' }],
+                    payer: { email: 'test@test.com', dni: '30111111' }
+                };
+
+                const res = await request(app).post('/api/pedidos').send(data);
+                expect(res.statusCode).toBe(201);
+
+                const [rows] = await pool.query('SELECT direccion_envio FROM pedidos WHERE id = ?', [res.body.pedido_id]);
+                expect(rows[0].direccion_envio).toBeNull();
+            });
+
+            it('Debería fallar con 400 si metodo_entrega es "envio_domicilio" sin dirección', async () => {
+                const data = {
+                    cliente_id: clienteId,
+                    metodo_entrega: 'envio_domicilio',
+                    items: [{ producto_id: productoStockId, cantidad: 1, precio_unitario: 1000, nombre: 'Producto Stock' }],
+                    payer: { email: 'test@test.com', dni: '30111111' }
+                };
+
+                const res = await request(app).post('/api/pedidos').send(data);
+                expect(res.statusCode).toBe(400);
+                expect(res.body.error).toMatch(/dirección/i);
+
+                // El stock no debe haberse tocado: la validación corta antes de la transacción.
+                const [productos] = await pool.query('SELECT stock FROM productos WHERE id = ?', [productoStockId]);
+                expect(productos[0].stock).toBe(10);
+            });
+
+            it('Debería crear el pedido y guardar la dirección si metodo_entrega es "envio_domicilio"', async () => {
+                const data = {
+                    cliente_id: clienteId,
+                    metodo_entrega: 'envio_domicilio',
+                    direccion: 'Av. Siempre Viva 742',
+                    items: [{ producto_id: productoStockId, cantidad: 1, precio_unitario: 1000, nombre: 'Producto Stock' }],
+                    payer: { email: 'test@test.com', dni: '30111111' }
+                };
+
+                const res = await request(app).post('/api/pedidos').send(data);
+                expect(res.statusCode).toBe(201);
+
+                const [rows] = await pool.query('SELECT metodo_entrega, direccion_envio FROM pedidos WHERE id = ?', [res.body.pedido_id]);
+                expect(rows[0].metodo_entrega).toBe('envio_domicilio');
+                expect(rows[0].direccion_envio).toBe('Av. Siempre Viva 742');
+            });
+        });
     });
 });
