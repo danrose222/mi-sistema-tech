@@ -1,8 +1,9 @@
 /**
  * Vacía las tablas transaccionales (pedidos, pagos, créditos, cuotas, stock,
- * clientes y productos de prueba) para dejar el sistema en cero antes de
- * salir a producción. Los usuarios del panel (admin/cajeros) NO se tocan,
- * salvo que falte el administrador principal, en cuyo caso se regenera.
+ * movimientos de caja, clientes y productos de prueba) para dejar el sistema
+ * en cero antes de salir a producción. Los usuarios del panel (admin/cajeros)
+ * NO se tocan, salvo que falte el administrador principal, en cuyo caso se
+ * regenera.
  *
  * Uso:
  *   npm run db:clean              (pide confirmación escribiendo "BORRAR")
@@ -30,6 +31,7 @@ const TABLAS_TRANSACCIONALES = [
   'cuotas',
   'creditos',
   'cuentas_corrientes',
+  'caja_movimientos',
   'pagos',
   'pedido_items',
   'pedidos',
@@ -50,7 +52,7 @@ function preguntar(texto) {
 async function confirmar(dbName) {
   if (process.argv.includes('--force')) return true;
 
-  console.log(`\nEsto borra TODOS los pedidos, pagos, créditos, cuotas, movimientos de stock, clientes y productos de "${dbName}".`);
+  console.log(`\nEsto borra TODOS los pedidos, pagos, créditos, cuotas, movimientos de stock y de caja, clientes y productos de "${dbName}".`);
   console.log('Los usuarios del panel (admin/cajeros) no se modifican, salvo que falte el administrador principal.\n');
 
   const respuesta = await preguntar('Escribí BORRAR para confirmar: ');
