@@ -114,6 +114,25 @@ exports.guardarLinkPago = async (id, pago_link, preference_id) => {
   );
 };
 
+// Datos de logística/tracking de Andreani. Se completan en dos momentos
+// distintos: destino/método/costo se conocen al generar el envío; el
+// tracking y la etiqueta recién llegan cuando Andreani confirma el envío
+// (crearEnvio en andreani.service.js). COALESCE permite pasar solo lo que
+// se conoce en cada momento sin pisar con NULL lo que ya se había guardado.
+exports.guardarDatosEnvio = async (id, { codigo_postal_destino = null, metodo_envio = null, costo_envio = null, andreani_tracking_id = null, url_etiqueta = null } = {}) => {
+  await pool.query(
+    `UPDATE pedidos
+     SET codigo_postal_destino = COALESCE(?, codigo_postal_destino),
+         metodo_envio = COALESCE(?, metodo_envio),
+         costo_envio = COALESCE(?, costo_envio),
+         andreani_tracking_id = COALESCE(?, andreani_tracking_id),
+         url_etiqueta = COALESCE(?, url_etiqueta),
+         updated_at = CURRENT_TIMESTAMP
+     WHERE id = ?`,
+    [codigo_postal_destino, metodo_envio, costo_envio, andreani_tracking_id, url_etiqueta, id]
+  );
+};
+
 exports.crearPago = async (pago) => {
   const { pedido_id, proveedor, proveedor_payment_id, monto, estado, raw_payload } = pago;
   const [result] = await pool.query(
