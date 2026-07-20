@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, PLATFORM_ID } from '@angular/core';
+import { Component, inject, signal, computed, PLATFORM_ID, NgZone } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
@@ -132,6 +132,47 @@ interface PedidoConfirmado {
               </form>
             </mat-card-content>
           </mat-card>
+
+          <!-- Fuera del <form [formGroup]>: los controles reactivos dentro de un
+               formGroup en este proyecto no re-renderizan bindings dinámicos de
+               otros elementos hermanos (visto empíricamente con calculandoEnvio
+               en un botón "Calcular" -> nunca actualizaba su texto/disabled
+               estando dentro del form, y sí lo hacía idéntico afuera). Mismo
+               patrón que metodo-entrega-card: [formControl] en vez de
+               formControlName para no depender del ControlContainer del form. -->
+          @if (checkoutForm.get('metodo_entrega')?.value === 'envio_domicilio') {
+            <mat-card class="mat-elevation-z2 calculo-envio-card">
+              <mat-card-content>
+                <h4 class="calculo-envio-heading">Cálculo de Envío</h4>
+                <div class="calculo-envio-row">
+                  <mat-form-field appearance="outline" class="calculo-envio-input">
+                    <mat-label>Código Postal</mat-label>
+                    <input matInput [formControl]="checkoutForm.controls.codigo_postal" inputmode="numeric" maxlength="8">
+                  </mat-form-field>
+                  <button
+                    type="button"
+                    class="calculo-envio-btn"
+                    [disabled]="calculandoEnvio()"
+                    (click)="calcularEnvio()">
+                    @if (calculandoEnvio()) {
+                      Calculando...
+                    } @else {
+                      Calcular
+                    }
+                  </button>
+                </div>
+                @if (cotizacionEnvio(); as cotizacion) {
+                  @if (cotizacion.costo === 0) {
+                    <p class="calculo-envio-resultado calculo-envio-gratis">
+                      <mat-icon>celebration</mat-icon> ¡Felicitaciones! Tu envío es Gratis.
+                    </p>
+                  } @else {
+                    <p class="calculo-envio-resultado">Costo de envío a tu CP: {{ cotizacion.costo | currency:'ARS' }}</p>
+                  }
+                }
+              </mat-card-content>
+            </mat-card>
+          }
         </div>
 
         <div class="checkout-summary">
@@ -249,6 +290,31 @@ interface PedidoConfirmado {
       gap: 16px;
     }
     .full-width { grid-column: 1 / -1; width: 100%; }
+
+    .calculo-envio-card { margin-bottom: 24px; }
+    .calculo-envio-heading {
+      margin: 0 0 12px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--white);
+    }
+    .calculo-envio-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .calculo-envio-input { flex: 1; }
+    .calculo-envio-btn { margin-top: 4px; }
+    .calculo-envio-resultado {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin: 4px 0 0;
+      font-size: 0.9rem;
+      color: var(--white);
+    }
+    .calculo-envio-resultado mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    .calculo-envio-gratis { color: var(--success); font-weight: 600; }
 
     .metodo-entrega-card { margin-bottom: 24px; }
     .metodo-entrega-heading {
@@ -513,6 +579,7 @@ export class CheckoutComponent {
   private router = inject(Router);
   private orderService = inject(OrderService);
   private platformId = inject(PLATFORM_ID);
+  private ngZone = inject(NgZone);
 
   isProcessing = signal(false);
   metodoPago = signal<MetodoPago>('mercado_pago');
@@ -548,8 +615,12 @@ export class CheckoutComponent {
     telefono: ['', Validators.required],
     metodo_entrega: ['retiro_local' as MetodoEntrega, Validators.required],
     direccion: [''],
+    codigo_postal: [''],
     notas: ['']
   });
+
+  calculandoEnvio = signal(false);
+  cotizacionEnvio = signal<{ costo: number } | null>(null);
 
   // Envío gratis a partir de este subtotal; por debajo, costo fijo temporal.
   // La misma regla se recalcula en el backend (nunca se confía en lo que
@@ -585,11 +656,41 @@ export class CheckoutComponent {
       if (metodo === 'retiro_local') {
         direccionControl?.clearValidators();
         direccionControl?.setValue('');
+        this.checkoutForm.get('codigo_postal')?.setValue('');
+        this.cotizacionEnvio.set(null);
       } else {
         direccionControl?.setValidators([Validators.required]);
       }
       direccionControl?.updateValueAndValidity();
     });
+  }
+
+  // Simulado: todavía no hay integración real con Andreani (el backend está
+  // en pausa esperando credenciales — ver andreani.service.js). El costo
+  // sigue la misma regla de negocio ($100.000) sin importar el Código Postal
+  // ingresado; el CP hoy solo se usa para la UX, no afecta el cálculo.
+  // Guarda el resultado en cotizacionEnvio (no en costoEnvio): costoEnvio es
+  // un computed automático que ya alimenta el Total a Pagar y no se puede
+  // sobreescribir a mano sin romper esa reactividad.
+  calcularEnvio() {
+    const codigoPostal = this.checkoutForm.get('codigo_postal')?.value?.trim();
+    if (!codigoPostal || this.calculandoEnvio()) return;
+
+    this.calculandoEnvio.set(true);
+    this.cotizacionEnvio.set(null);
+
+    // El signal se termina de setear dentro del callback de un setTimeout,
+    // no dentro de un evento de click: se fuerza explícitamente a correr
+    // dentro de la zona de Angular para garantizar que dispare change
+    // detection sin importar el origen del callback asíncrono.
+    setTimeout(() => {
+      this.ngZone.run(() => {
+        const subtotal = this.carrito.totalPrecio();
+        const costo = subtotal >= this.UMBRAL_ENVIO_GRATIS ? 0 : this.COSTO_ENVIO_FIJO;
+        this.cotizacionEnvio.set({ costo });
+        this.calculandoEnvio.set(false);
+      });
+    }, 1000);
   }
 
   pagar() {
