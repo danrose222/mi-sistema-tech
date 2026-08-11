@@ -46,7 +46,9 @@ export const routes: Routes = [
       // Rutas de Créditos
       { path: 'creditos', loadComponent: () => import('./pages/creditos/creditos.component').then(m => m.CreditosComponent) },
       { path: 'creditos/nuevo', loadComponent: () => import('./pages/creditos/nuevo-credito/nuevo-credito.component').then(m => m.NuevoCreditoComponent) },
-      { path: 'creditos/:id', loadComponent: () => import('./pages/creditos/credito-detalle/credito-detalle.component').then(m => m.CreditoDetalleComponent) }
+      { path: 'creditos/:id', loadComponent: () => import('./pages/creditos/credito-detalle/credito-detalle.component').then(m => m.CreditoDetalleComponent) },
+
+      { path: 'plan-canje', loadComponent: () => import('./pages/plan-canje/plan-canje.component').then(m => m.PlanCanjeComponent) }
     ]
   },
   {

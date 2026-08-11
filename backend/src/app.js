@@ -103,6 +103,9 @@ app.use('/api/reportes', reportesRoutes);
 const publicoRoutes = require('./routes/publicoRoutes');
 app.use('/api/publico', publicoRoutes);
 
+const planCanjeRoutes = require('./routes/planCanjeRoutes');
+app.use('/api/plan-canje', planCanjeRoutes);
+
 // Endpoint de Health Check
 app.get('/api/health', (req, res) => {
     res.status(200).json({ status: 'UP', timestamp: new Date() });
