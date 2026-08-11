@@ -98,22 +98,20 @@ npm install
 npm run build -- --configuration production
 ```
 
-Esto genera `dist/frontend/browser` (assets estáticos del panel admin y del catálogo, servidos por Nginx) y `dist/frontend/server` (bundle SSR del catálogo público). Levantar el servidor SSR con el gestor de procesos:
+Esto genera `dist/frontend/browser` (assets estáticos del panel admin y del catálogo) y `dist/frontend/server` (bundle SSR del catálogo público, sirve también `/sitemap.xml`).
+
+### 4. Levantar ambos procesos con PM2
+
+Desde la raíz del repo, [`deploy/ecosystem.config.js`](deploy/ecosystem.config.js) define los dos procesos (backend y frontend SSR) en un solo archivo:
 
 ```bash
-BACKEND_URL=http://localhost:3000 pm2 start dist/frontend/server/server.mjs --name cel-shop-frontend
+pm2 start deploy/ecosystem.config.js
+pm2 save   # persiste la lista para que PM2 los relevante en cada reboot del VPS
 ```
 
-`BACKEND_URL` le indica al proceso SSR dónde vive el backend en la red interna del servidor (no el dominio público) para poder generar `/sitemap.xml`; si no se define, asume `http://localhost:3000`.
+### 5. Reverse proxy (Nginx)
 
-### 4. Reverse proxy
-
-Un Nginx (u otro reverse proxy) delante de ambos procesos, enrutando:
-
-- `/api/*` y `/uploads/*` → backend (puerto `3000`)
-- el resto → proceso SSR del frontend (puerto por defecto `4000`)
-
-con certificado TLS sobre el dominio configurado en `FRONTEND_URL`.
+[`deploy/nginx/celshopcenter.conf`](deploy/nginx/celshopcenter.conf) tiene la configuración lista para copiar a `/etc/nginx/sites-available/`: enruta `/api/*` y `/uploads/*` al backend (puerto `3000`) y el resto al proceso SSR del frontend (puerto `4000`), con TLS vía Certbot sobre el dominio configurado en `FRONTEND_URL`. Los pasos exactos están comentados al inicio del archivo.
 
 ---
 
