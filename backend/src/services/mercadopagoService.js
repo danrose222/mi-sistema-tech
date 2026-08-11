@@ -7,6 +7,12 @@ const { MercadoPagoConfig, Preference, Payment, MerchantOrder, WebhookSignatureV
 // si se crea la preferencia con una cuenta y se consulta el pago con otra,
 // Mercado Pago devuelve 404/401 en vez del pago real.
 const MP_TOKEN = process.env.MP_ACCESS_TOKEN_TEST || process.env.MP_ACCESS_TOKEN || '';
+if (!MP_TOKEN) {
+  // Sin token, el SDK igual arma la request y Mercado Pago la rechaza con un
+  // 403 genérico (PA_UNAUTHORIZED_RESULT_FROM_POLICIES) que no deja claro
+  // que el problema es de configuración y no del código de la integración.
+  console.warn('Aviso: MP_ACCESS_TOKEN (o MP_ACCESS_TOKEN_TEST) no está configurado. El checkout con Mercado Pago no funcionará sin él.');
+}
 const mpClient = new MercadoPagoConfig({ accessToken: MP_TOKEN });
 const preferenceClient = new Preference(mpClient);
 const paymentClient = new Payment(mpClient);

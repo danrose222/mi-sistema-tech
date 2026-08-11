@@ -13,6 +13,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { CarritoService } from '../../../services/carrito.service';
 import { OrderService, MetodoPago, MetodoEntrega } from '../../../services/order.service';
+import { ResumenTotalesComponent } from '../../../components/resumen-totales/resumen-totales.component';
 
 interface OpcionMetodoPago {
   valor: MetodoPago;
@@ -38,7 +39,8 @@ interface PedidoConfirmado {
     MatFormFieldModule,
     MatCardModule,
     MatIconModule,
-    MatRadioModule
+    MatRadioModule,
+    ResumenTotalesComponent
   ],
   template: `
     <div class="page-container">
@@ -191,25 +193,16 @@ interface PedidoConfirmado {
                 }
               </div>
 
-              <div class="summary-totals">
-                <div class="summary-row">
-                  <span>Envío</span>
-                  @if (costoEnvio() === 0) {
-                    <span class="free-shipping">Gratis</span>
-                  } @else {
-                    <span>{{ costoEnvio() | currency:'ARS' }}</span>
-                  }
-                </div>
-                <div class="summary-row total">
-                  <span>Total a Pagar</span>
-                  <span>{{ totalConEnvio() | currency:'ARS' }}</span>
-                </div>
-              </div>
+              <app-resumen-totales
+                [costoEnvio]="costoEnvio()"
+                [total]="totalConEnvio()"
+                labelTotal="Total a Pagar">
+              </app-resumen-totales>
 
               <div class="metodo-pago-selector">
                 <h3 class="metodo-pago-heading">Método de Pago</h3>
                 <div class="metodo-pago-grid" role="radiogroup" aria-label="Método de pago">
-                  @for (opcion of metodosPago; track opcion.valor) {
+                  @for (opcion of metodosPagoDisponibles(); track opcion.valor) {
                     <button
                       type="button"
                       class="metodo-pago-opcion"
@@ -377,6 +370,16 @@ interface PedidoConfirmado {
       border-color: var(--signal) !important;
       border-width: 2px;
     }
+    /* El rojo queda reservado a errores reales: Angular Material marca el
+       mat-form-field con .mat-form-field-invalid recién cuando el control es
+       inválido Y fue tocado (o se intentó enviar el form), nunca en el
+       estado normal. Va después de .mat-focused para que gane el error por
+       sobre el foco si el usuario sigue editando un campo inválido. */
+    .checkout-form ::ng-deep .mat-mdc-form-field.mat-form-field-invalid .mdc-notched-outline__leading,
+    .checkout-form ::ng-deep .mat-mdc-form-field.mat-form-field-invalid .mdc-notched-outline__notch,
+    .checkout-form ::ng-deep .mat-mdc-form-field.mat-form-field-invalid .mdc-notched-outline__trailing {
+      border-color: var(--danger) !important;
+    }
 
     /* Summary */
     .items-mini-list {
@@ -402,25 +405,6 @@ interface PedidoConfirmado {
     .mini-qty { font-weight: 600; color: var(--ash); }
     .mini-name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .mini-price { font-weight: 600; }
-
-    .summary-totals {
-      border-top: 1px solid var(--border-dim);
-      padding-top: 24px;
-    }
-    .summary-row {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 16px;
-      color: var(--ash);
-      font-size: 1.1rem;
-    }
-    .free-shipping { color: var(--success); font-weight: 600; }
-    .summary-row.total {
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: var(--white);
-      margin-bottom: 0;
-    }
 
     /* No tenemos el archivo de marca oficial de Mercado Pago disponible, así
        que en vez de imitar su isotipo se usa su azul de marca (#009ee3) para
@@ -503,7 +487,10 @@ interface PedidoConfirmado {
       background: rgba(0, 174, 239, 0.08);
       box-shadow: 0 0 0 1px var(--signal);
     }
-    .metodo-pago-opcion mat-icon { color: var(--signal); flex-shrink: 0; }
+    /* El azul de marca queda reservado a la opción seleccionada; el resto usa
+       un tono neutro para no competir visualmente con la que el usuario eligió. */
+    .metodo-pago-opcion mat-icon { color: var(--ash); flex-shrink: 0; }
+    .metodo-pago-opcion.selected mat-icon { color: var(--signal); }
     .metodo-pago-texto { display: flex; flex-direction: column; gap: 2px; }
     .metodo-pago-titulo { font-size: 0.92rem; font-weight: 600; }
     .metodo-pago-desc { font-size: 0.78rem; color: var(--ash); }
@@ -567,7 +554,6 @@ interface PedidoConfirmado {
     }
     @media (max-width: 480px) {
       .page-container { padding: 32px 16px; }
-      .summary-row.total { font-size: 1.25rem; }
       .success-screen { margin: 40px auto; }
     }
   `]
@@ -606,6 +592,17 @@ export class CheckoutComponent {
 
   iconoBoton = computed(() => {
     return this.metodosPago.find((opcion) => opcion.valor === this.metodoPago())?.icono || 'shopping_cart_checkout';
+  });
+
+  // Con envío a domicilio no hay forma de pagar en efectivo ni de coordinar
+  // una transferencia contra entrega física, así que el único método que
+  // tiene sentido es Mercado Pago. En retiro en local las tres opciones
+  // siguen siendo válidas.
+  metodosPagoDisponibles = computed(() => {
+    if (this.metodoEntregaValue() === 'envio_domicilio') {
+      return this.metodosPago.filter((opcion) => opcion.valor === 'mercado_pago');
+    }
+    return this.metodosPago;
   });
 
   checkoutForm = this.fb.group({
@@ -660,6 +657,10 @@ export class CheckoutComponent {
         this.cotizacionEnvio.set(null);
       } else {
         direccionControl?.setValidators([Validators.required]);
+        // Envío a domicilio deja Mercado Pago como único método disponible
+        // (ver metodosPagoDisponibles); si el usuario tenía elegido efectivo
+        // o transferencia, hay que recaer en la única opción que sigue visible.
+        this.metodoPago.set('mercado_pago');
       }
       direccionControl?.updateValueAndValidity();
     });

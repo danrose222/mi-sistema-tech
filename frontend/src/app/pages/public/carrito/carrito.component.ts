@@ -6,11 +6,12 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 
 import { CarritoService, ItemCarrito } from '../../../services/carrito.service';
+import { ResumenTotalesComponent } from '../../../components/resumen-totales/resumen-totales.component';
 
 @Component({
   selector: 'app-carrito',
   standalone: true,
-  imports: [CommonModule, RouterModule, MatButtonModule, MatIconModule, MatCardModule],
+  imports: [CommonModule, RouterModule, MatButtonModule, MatIconModule, MatCardModule, ResumenTotalesComponent],
   template: `
     <div class="page-container">
       <h1 class="page-title">Mi Carrito</h1>
@@ -20,7 +21,7 @@ import { CarritoService, ItemCarrito } from '../../../services/carrito.service';
           <mat-icon>shopping_cart</mat-icon>
           <h2>Tu carrito está vacío</h2>
           <p>¡Explorá nuestro catálogo y encontrá lo que buscás!</p>
-          <button mat-flat-button color="primary" routerLink="/productos">Ir al catálogo</button>
+          <button mat-flat-button color="primary" class="btn-catalogo" routerLink="/productos">Ir al catálogo</button>
         </div>
       } @else {
         <div class="cart-layout">
@@ -66,18 +67,12 @@ import { CarritoService, ItemCarrito } from '../../../services/carrito.service';
                 <mat-card-title>Resumen de compra</mat-card-title>
               </mat-card-header>
               <mat-card-content>
-                <div class="summary-row">
-                  <span>Productos ({{ carrito.totalItems() }})</span>
-                  <span>{{ carrito.totalPrecio() | currency:'ARS' }}</span>
-                </div>
-                <div class="summary-row">
-                  <span>Envío</span>
-                  <span class="free-shipping">Gratis</span>
-                </div>
-                <div class="summary-row total">
-                  <span>Total</span>
-                  <span>{{ carrito.totalPrecio() | currency:'ARS' }}</span>
-                </div>
+                <app-resumen-totales
+                  [subtotal]="carrito.totalPrecio()"
+                  [labelSubtotal]="'Productos (' + carrito.totalItems() + ')'"
+                  [costoEnvio]="0"
+                  [total]="carrito.totalPrecio()">
+                </app-resumen-totales>
               </mat-card-content>
               <mat-card-actions>
                 <button mat-flat-button color="primary" class="full-width btn-checkout" routerLink="/checkout">
@@ -96,18 +91,19 @@ import { CarritoService, ItemCarrito } from '../../../services/carrito.service';
       margin: 0 auto;
       padding: 48px 24px;
     }
-    .page-title { margin: 0 0 32px 0; font-size: 2rem; font-weight: 700; color: #0f172a; }
+    .page-title { margin: 0 0 32px 0; font-size: 2rem; font-weight: 700; color: var(--white); }
 
     .empty-state {
       text-align: center;
       padding: 64px 24px;
-      background: white;
-      border-radius: 16px;
-      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+      background: var(--slate);
+      border: 1px solid var(--border-dim);
+      border-radius: var(--radius-lg);
     }
-    .empty-state mat-icon { font-size: 80px; width: 80px; height: 80px; color: #cbd5e1; margin-bottom: 24px; }
-    .empty-state h2 { font-size: 2rem; color: #1e293b; margin-bottom: 8px; }
-    .empty-state p { font-size: 1.1rem; color: #64748b; margin-bottom: 32px; }
+    .empty-state mat-icon { font-size: 80px; width: 80px; height: 80px; color: var(--ash); margin-bottom: 24px; }
+    .empty-state h2 { font-size: 2rem; color: var(--white); margin-bottom: 8px; }
+    .empty-state p { font-size: 1.1rem; color: var(--ash); margin-bottom: 32px; }
+    .btn-catalogo { background-color: var(--signal) !important; padding: 8px 24px; border-radius: var(--radius-sm); }
 
     .cart-layout {
       display: grid;
@@ -127,56 +123,56 @@ import { CarritoService, ItemCarrito } from '../../../services/carrito.service';
       align-items: center;
       padding: 16px;
       gap: 24px;
-      border-radius: 12px;
+      border: 1px solid var(--border-dim);
+      border-radius: var(--radius-md);
     }
     .item-img {
       width: 100px; height: 100px;
       background: #f8fafc;
-      border-radius: 8px;
+      border-radius: var(--radius-sm);
       padding: 8px;
       cursor: pointer;
     }
     .item-img img { width: 100%; height: 100%; object-fit: contain; }
-    
+
     .item-details { flex: 1; }
-    .item-details h3 { margin: 0 0 8px 0; font-size: 1.1rem; color: #1e293b; cursor: pointer; }
-    .item-details h3:hover { text-decoration: underline; color: #0284c7; }
-    .item-price { font-weight: 600; color: #64748b; font-size: 1.1rem; }
+    .item-details h3 { margin: 0 0 8px 0; font-size: 1.1rem; color: var(--white); cursor: pointer; }
+    .item-details h3:hover { text-decoration: underline; color: var(--signal); }
+    .item-price { font-weight: 600; color: var(--ash); font-size: 1.1rem; }
 
     .item-quantity {
       display: flex;
       align-items: center;
-      background: #f1f5f9;
+      background: var(--slate);
+      border: 1px solid var(--border-dim);
       border-radius: 20px;
       padding: 4px;
     }
-    .qty-number { font-weight: 600; font-size: 1.1rem; width: 32px; text-align: center; }
+    .item-quantity ::ng-deep .mat-icon { color: var(--white); }
+    .qty-number { font-weight: 600; font-size: 1.1rem; width: 32px; text-align: center; color: var(--white); }
 
-    .item-subtotal { font-size: 1.25rem; font-weight: 700; color: #0284c7; min-width: 120px; text-align: right; }
+    .item-subtotal { font-size: 1.25rem; font-weight: 700; color: var(--white); min-width: 120px; text-align: right; }
 
     .cart-summary {
       position: sticky;
       top: 90px;
     }
-    .summary-row {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 16px;
-      color: #475569;
-      font-size: 1.1rem;
-    }
-    .free-shipping { color: #16a34a; font-weight: 600; }
-    .summary-row.total {
-      margin-top: 24px;
-      padding-top: 24px;
-      border-top: 1px solid #e2e8f0;
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: #0f172a;
-    }
-    
+    /* mat-card es transparent !important a nivel global (ver styles.css):
+       sin esto el título hereda el color oscuro por defecto de Material,
+       invisible sobre --void. Mismo patrón que checkout-summary. */
+    .cart-summary ::ng-deep .mat-mdc-card-title { color: var(--white); }
+
     .full-width { width: 100%; }
-    .btn-checkout { padding: 8px 0; font-size: 1.1rem; margin-top: 16px; border-radius: 8px; }
+    /* Azul de marca explícito en vez del "primary" genérico del tema de
+       Material (quedaba de un tono más apagado): mismo --signal que usa el
+       botón de pago del checkout, para que se lea como "el próximo paso". */
+    .btn-checkout {
+      padding: 8px 0;
+      font-size: 1.1rem;
+      margin-top: 16px;
+      border-radius: var(--radius-sm);
+      background-color: var(--signal) !important;
+    }
 
     @media (max-width: 900px) {
       .cart-layout { grid-template-columns: 1fr; }
