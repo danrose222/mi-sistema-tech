@@ -8,18 +8,20 @@ import { MatBadgeModule } from '@angular/material/badge';
 import { MatMenuModule } from '@angular/material/menu';
 
 import { CarritoService } from '../../services/carrito.service';
+import { CookieConsentComponent } from '../cookie-consent/cookie-consent.component';
 
 @Component({
   selector: 'app-public-layout',
   standalone: true,
   imports: [
-    CommonModule, 
+    CommonModule,
     RouterModule,
     MatToolbarModule,
     MatButtonModule,
     MatIconModule,
     MatBadgeModule,
-    MatMenuModule
+    MatMenuModule,
+    CookieConsentComponent
   ],
   template: `
     <div class="shell">
@@ -75,6 +77,15 @@ import { CarritoService } from '../../services/carrito.service';
             </ul>
           </div>
           <div class="footer-col">
+            <h4>Legal</h4>
+            <ul>
+              <li><a routerLink="/legal/terminos-y-condiciones">Términos y Condiciones</a></li>
+              <li><a routerLink="/legal/privacidad">Política de Privacidad</a></li>
+              <li><a routerLink="/legal/cookies">Política de Cookies</a></li>
+              <li><a routerLink="/legal/arrepentimiento">Botón de Arrepentimiento</a></li>
+            </ul>
+          </div>
+          <div class="footer-col">
             <h4>Contacto</h4>
             <p class="footer-financiacion">Financiación en cuotas con solo DNI. Aprobación rápida.</p>
             <div class="contact-item">
@@ -99,6 +110,8 @@ import { CarritoService } from '../../services/carrito.service';
           <p>&copy; 2026 Cel Shop Center</p>
         </div>
       </footer>
+
+      <app-cookie-consent></app-cookie-consent>
     </div>
   `,
   styles: [`
@@ -219,7 +232,7 @@ import { CarritoService } from '../../services/carrito.service';
     }
     .footer-inner {
       display: grid;
-      grid-template-columns: 1.5fr 1fr 1fr;
+      grid-template-columns: 1.5fr 1fr 1fr 1fr;
       gap: 56px;
       max-width: 1200px;
       margin: 0 auto;

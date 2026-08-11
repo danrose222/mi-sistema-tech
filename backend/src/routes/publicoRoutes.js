@@ -6,5 +6,6 @@ const publicoController = require('../controllers/publicoController');
 router.get('/productos', publicoController.listarProductos);
 router.get('/productos/:slug', publicoController.obtenerProductoPorSlug);
 router.get('/categorias', publicoController.listarCategorias);
+router.get('/sitemap.xml', publicoController.sitemap);
 
 module.exports = router;

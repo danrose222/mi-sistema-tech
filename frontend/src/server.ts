@@ -12,17 +12,20 @@ const browserDistFolder = join(import.meta.dirname, '../browser');
 const app = express();
 const angularApp = new AngularNodeAppEngine();
 
-/**
- * Example Express Rest API endpoints can be defined here.
- * Uncomment and define endpoints as necessary.
- *
- * Example:
- * ```ts
- * app.get('/api/{*splat}', (req, res) => {
- *   // Handle API request
- * });
- * ```
- */
+// El sitemap se genera en el backend (tiene acceso directo a los productos activos);
+// acá solo se hace de passthrough para que quede servido en la raíz del dominio,
+// que es donde Google Search Console y robots.txt lo esperan.
+const backendUrl = process.env['BACKEND_URL'] || 'http://localhost:3000';
+
+app.get('/sitemap.xml', async (req, res) => {
+  try {
+    const response = await fetch(`${backendUrl}/api/publico/sitemap.xml`);
+    const xml = await response.text();
+    res.type('application/xml').send(xml);
+  } catch {
+    res.status(502).send('Sitemap no disponible');
+  }
+});
 
 /**
  * Serve static files from /browser

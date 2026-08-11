@@ -93,6 +93,13 @@ exports.obtenerProductosPublicoPaginado = async ({ page = 1, limit = 20, search 
   return { data: await adjuntarImagenes(rows), total: countRows[0].total };
 };
 
+exports.obtenerActivosParaSitemap = async () => {
+  const [rows] = await pool.query(
+    'SELECT id, nombre, updated_at FROM productos WHERE activo = 1 ORDER BY id ASC'
+  );
+  return rows;
+};
+
 exports.obtenerProductoPublicoPorId = async (id) => {
   const [rows] = await pool.query(
     'SELECT id, nombre, descripcion, precio, stock FROM productos WHERE id = ? AND activo = 1',

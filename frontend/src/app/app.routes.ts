@@ -13,7 +13,14 @@ export const routes: Routes = [
       { path: 'productos', loadComponent: () => import('./pages/public/productos-list/productos-list.component').then(m => m.ProductosListComponent) },
       { path: 'producto/:slug', loadComponent: () => import('./pages/public/producto-detalle/producto-detalle.component').then(m => m.ProductoDetalleComponent) },
       { path: 'carrito', loadComponent: () => import('./pages/public/carrito/carrito.component').then(m => m.CarritoComponent) },
-      { path: 'checkout', loadComponent: () => import('./pages/public/checkout/checkout.component').then(m => m.CheckoutComponent) }
+      { path: 'checkout', loadComponent: () => import('./pages/public/checkout/checkout.component').then(m => m.CheckoutComponent) },
+
+      // Páginas legales: comparten un único componente genérico, `data.slug`
+      // selecciona el contenido correspondiente en legal-content.ts.
+      { path: 'legal/terminos-y-condiciones', loadComponent: () => import('./pages/public/legal/legal.component').then(m => m.LegalComponent), data: { slug: 'terminos' } },
+      { path: 'legal/privacidad', loadComponent: () => import('./pages/public/legal/legal.component').then(m => m.LegalComponent), data: { slug: 'privacidad' } },
+      { path: 'legal/cookies', loadComponent: () => import('./pages/public/legal/legal.component').then(m => m.LegalComponent), data: { slug: 'cookies' } },
+      { path: 'legal/arrepentimiento', loadComponent: () => import('./pages/public/legal/legal.component').then(m => m.LegalComponent), data: { slug: 'arrepentimiento' } }
     ]
   },
   

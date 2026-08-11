@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /login
+Disallow: /carrito
+Disallow: /checkout
+
+Sitemap: https://www.celshopcenter.com.ar/sitemap.xml

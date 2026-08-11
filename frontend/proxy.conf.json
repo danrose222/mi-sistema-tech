@@ -11,5 +11,13 @@
     "target": "http://localhost:3000",
     "secure": false,
     "changeOrigin": true
+  },
+  "/sitemap.xml": {
+    "target": "http://localhost:3000",
+    "secure": false,
+    "changeOrigin": true,
+    "pathRewrite": {
+      "^/sitemap.xml": "/api/publico/sitemap.xml"
+    }
   }
 }

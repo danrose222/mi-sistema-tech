@@ -68,3 +68,47 @@ exports.listarCategorias = async (req, res) => {
   // (el sidebar de categorías simplemente no muestra filtros).
   res.json({ success: true, data: [] });
 };
+
+function xmlEscape(text) {
+  return String(text).replace(/[<>&'"]/g, (ch) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' }[ch]));
+}
+
+// Reusa FRONTEND_URL (ya definida para CORS) como base de las URLs del sitemap.
+const SITE_URL = process.env.FRONTEND_URL || 'http://localhost:4200';
+
+exports.sitemap = async (req, res) => {
+  try {
+    const productos = await productoModel.obtenerActivosParaSitemap();
+
+    const urlsEstaticas = [
+      { loc: '/', changefreq: 'daily', priority: '1.0' },
+      { loc: '/productos', changefreq: 'daily', priority: '0.9' }
+    ];
+
+    const urlsProductos = productos.map((p) => ({
+      loc: `/producto/${p.id}-${slugify(p.nombre)}`,
+      lastmod: new Date(p.updated_at).toISOString().split('T')[0],
+      changefreq: 'weekly',
+      priority: '0.8'
+    }));
+
+    const entradas = [...urlsEstaticas, ...urlsProductos]
+      .map((u) => `  <url>
+    <loc>${xmlEscape(SITE_URL + u.loc)}</loc>
+    ${u.lastmod ? `<lastmod>${u.lastmod}</lastmod>` : ''}
+    <changefreq>${u.changefreq}</changefreq>
+    <priority>${u.priority}</priority>
+  </url>`)
+      .join('\n');
+
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${entradas}
+</urlset>`;
+
+    res.type('application/xml').send(xml);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: 'Error al generar el sitemap' });
+  }
+};

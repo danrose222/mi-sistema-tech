@@ -101,8 +101,10 @@ npm run build -- --configuration production
 Esto genera `dist/frontend/browser` (assets estáticos del panel admin y del catálogo, servidos por Nginx) y `dist/frontend/server` (bundle SSR del catálogo público). Levantar el servidor SSR con el gestor de procesos:
 
 ```bash
-pm2 start dist/frontend/server/server.mjs --name cel-shop-frontend
+BACKEND_URL=http://localhost:3000 pm2 start dist/frontend/server/server.mjs --name cel-shop-frontend
 ```
+
+`BACKEND_URL` le indica al proceso SSR dónde vive el backend en la red interna del servidor (no el dominio público) para poder generar `/sitemap.xml`; si no se define, asume `http://localhost:3000`.
 
 ### 4. Reverse proxy
 
