@@ -1,33 +1,55 @@
 /**
- * Vacía las tablas transaccionales (pedidos, pagos, créditos, cuotas, stock,
- * movimientos de caja, clientes y productos de prueba) para dejar el sistema
- * en cero antes de salir a producción. Los usuarios del panel (admin/cajeros)
- * NO se tocan, salvo que falte el administrador principal, en cuyo caso se
- * regenera.
+ * Seeder de inicialización para producción: deja la base de datos en cero
+ * (sin ningún dato de prueba/desarrollo) y crea el único usuario
+ * administrador con el que el cliente arranca en producción.
+ *
+ * Vacía TODAS las tablas transaccionales y de datos de desarrollo, incluida
+ * `usuarios` -- a propósito: así se eliminan también las cuentas dummy que
+ * genera `npm run seed` (admin/juan/maria con contraseñas hardcodeadas) y
+ * no queda ninguna cuenta de prueba dando vueltas en producción.
+ *
+ * Este esquema no tiene tablas de catálogo propias (roles, estados,
+ * categorías): son columnas ENUM fijas definidas en el propio CREATE TABLE
+ * de cada migración (ver migrations/001_initial.sql y
+ * migrations/021_create_plan_canje.sql), así que no hay nada más que
+ * "sembrar" aparte del administrador.
+ *
+ * Idempotencia: en vez de verificar existencia antes de insertar, el script
+ * vacía las tablas y recrea el admin en cada corrida. El resultado final es
+ * siempre el mismo (una sola cuenta admin, todo lo demás en cero) sin
+ * fallar ni duplicar registros -- correrlo dos veces seguidas es seguro.
+ * Por eso mismo, NO es una herramienta de mantenimiento: está pensada para
+ * correr una única vez, justo antes del primer despliegue. Volver a
+ * correrla contra una base ya en producción borra pedidos, clientes y
+ * usuarios reales.
  *
  * Uso:
- *   npm run db:clean              (pide confirmación escribiendo "BORRAR")
- *   npm run db:clean -- --force   (sin confirmación, para pipelines)
+ *   ADMIN_USERNAME=admin ADMIN_INITIAL_PASSWORD=xxxxxxxx npm run db:clean
+ *   ADMIN_USERNAME=admin ADMIN_INITIAL_PASSWORD=xxxxxxxx npm run db:clean -- --force
  *
  * Variables de entorno:
- *   DB_HOST, DB_USER, DB_PASSWORD, DB_NAME  (requeridas)
- *   ADMIN_USERNAME                          (opcional: si no está definida,
- *                                            no se toca ni se valida nada de usuarios)
- *   ADMIN_PASSWORD, ADMIN_NOMBRE            (requeridas solo si ADMIN_USERNAME
- *                                            no existe todavía en la base — no
- *                                            hay contraseña por defecto a propósito)
- *
- * Nota: TRUNCATE en MySQL hace un commit implícito por tabla, así que esta
- * limpieza no es atómica de punta a punta. Por eso el chequeo de que el
- * admin se pueda regenerar corre ANTES de tocar cualquier tabla.
+ *   DB_HOST, DB_USER, DB_NAME               (requeridas)
+ *   DB_PASSWORD                             (opcional, default '')
+ *   ADMIN_USERNAME                          (requerida)
+ *   ADMIN_INITIAL_PASSWORD                  (requerida, mínimo 8 caracteres;
+ *                                            sin valor por defecto a propósito,
+ *                                            nunca hardcodear una contraseña acá)
+ *   ADMIN_NOMBRE                            (opcional, default 'Administrador')
  */
 require('dotenv').config();
 const readline = require('readline');
 const mysql = require('mysql2/promise');
 const bcrypt = require('bcryptjs');
 
-const TABLAS_TRANSACCIONALES = [
+const BCRYPT_ROUNDS = 12;
+const PASSWORD_MIN_LENGTH = 8;
+
+// Orden sin relevancia funcional (FOREIGN_KEY_CHECKS se desactiva durante el
+// vaciado), pero se mantienen las tablas hijas antes que sus padres por
+// legibilidad. `usuarios` va al final porque es la que más tablas referencian.
+const TABLAS_A_VACIAR = [
   'alertas_enviadas',
+  'plan_canje',
   'cuotas',
   'creditos',
   'cuentas_corrientes',
@@ -38,7 +60,9 @@ const TABLAS_TRANSACCIONALES = [
   'stock_movimientos',
   'producto_imagenes',
   'productos',
-  'clientes'
+  'whatsapp_sessions',
+  'clientes',
+  'usuarios'
 ];
 
 function preguntar(texto) {
@@ -52,57 +76,41 @@ function preguntar(texto) {
 async function confirmar(dbName) {
   if (process.argv.includes('--force')) return true;
 
-  console.log(`\nEsto borra TODOS los pedidos, pagos, créditos, cuotas, movimientos de stock y de caja, clientes y productos de "${dbName}".`);
-  console.log('Los usuarios del panel (admin/cajeros) no se modifican, salvo que falte el administrador principal.\n');
+  console.log(`\nEsto deja "${dbName}" completamente en cero: borra pedidos, pagos, créditos,`);
+  console.log('cuotas, movimientos de stock y caja, clientes, canjes, sesiones de WhatsApp');
+  console.log('y TODOS los usuarios (incluidas las cuentas de prueba de "npm run seed").');
+  console.log('Al final queda un único usuario administrador, tomado de ADMIN_USERNAME /');
+  console.log('ADMIN_INITIAL_PASSWORD.\n');
 
   const respuesta = await preguntar('Escribí BORRAR para confirmar: ');
   return respuesta.trim() === 'BORRAR';
 }
 
-/**
- * Si ADMIN_USERNAME está definido y ese usuario no existe todavía, exige que
- * ADMIN_PASSWORD también esté definida. Se corre antes de truncar cualquier
- * tabla para no dejar la base a medio limpiar si falta ese dato.
- */
-async function validarQueElAdminSePuedaRegenerar(connection) {
-  const username = process.env.ADMIN_USERNAME;
-  if (!username) {
-    console.log('  ⚠ ADMIN_USERNAME no está definida: se omite la verificación del administrador.');
-    return;
+function validarEnv() {
+  const requeridas = ['DB_HOST', 'DB_USER', 'DB_NAME', 'ADMIN_USERNAME', 'ADMIN_INITIAL_PASSWORD'];
+  const faltantes = requeridas.filter((clave) => !process.env[clave]);
+  if (faltantes.length > 0) {
+    throw new Error(`Faltan variables de entorno: ${faltantes.join(', ')}`);
   }
-
-  const [existentes] = await connection.query('SELECT id FROM usuarios WHERE username = ?', [username]);
-  if (existentes.length === 0 && !process.env.ADMIN_PASSWORD) {
-    throw new Error(
-      `El usuario "${username}" no existe y ADMIN_PASSWORD no está definida: no se puede regenerar el ` +
-      'administrador sin una contraseña explícita (no hay valor por defecto a propósito).'
-    );
+  if (process.env.ADMIN_INITIAL_PASSWORD.length < PASSWORD_MIN_LENGTH) {
+    throw new Error(`ADMIN_INITIAL_PASSWORD debe tener al menos ${PASSWORD_MIN_LENGTH} caracteres.`);
   }
 }
 
-async function asegurarAdmin(connection) {
-  const username = process.env.ADMIN_USERNAME;
-  if (!username) return;
-
-  const [existentes] = await connection.query('SELECT id FROM usuarios WHERE username = ?', [username]);
-  if (existentes.length > 0) {
-    console.log(`  ✓ Usuario "${username}" ya existía, se conserva sin modificar.`);
-    return;
-  }
-
-  const hash = await bcrypt.hash(process.env.ADMIN_PASSWORD, 10);
+async function crearAdmin(connection) {
+  const hash = await bcrypt.hash(process.env.ADMIN_INITIAL_PASSWORD, BCRYPT_ROUNDS);
   await connection.query(
     "INSERT INTO usuarios (nombre, username, password_hash, rol) VALUES (?, ?, ?, 'admin')",
-    [process.env.ADMIN_NOMBRE || 'Administrador', username, hash]
+    [process.env.ADMIN_NOMBRE || 'Administrador', process.env.ADMIN_USERNAME, hash]
   );
-  console.log(`  ✓ Usuario administrador "${username}" regenerado.`);
+  console.log(`  ✓ Usuario administrador "${process.env.ADMIN_USERNAME}" creado.`);
 }
 
 async function main() {
-  const requeridas = ['DB_HOST', 'DB_USER', 'DB_NAME'];
-  const faltantes = requeridas.filter((clave) => !process.env[clave]);
-  if (faltantes.length > 0) {
-    console.error(`Faltan variables de entorno: ${faltantes.join(', ')}`);
+  try {
+    validarEnv();
+  } catch (error) {
+    console.error(`\n${error.message}\n`);
     process.exit(1);
   }
 
@@ -120,21 +128,20 @@ async function main() {
   });
 
   try {
-    await validarQueElAdminSePuedaRegenerar(connection);
-
-    console.log('\nLimpiando tablas...');
+    console.log('\nVaciando tablas...');
     await connection.query('SET FOREIGN_KEY_CHECKS = 0');
-    for (const tabla of TABLAS_TRANSACCIONALES) {
+    for (const tabla of TABLAS_A_VACIAR) {
       await connection.query(`TRUNCATE TABLE \`${tabla}\``);
       console.log(`  ✓ ${tabla} vaciada`);
     }
     await connection.query('SET FOREIGN_KEY_CHECKS = 1');
 
-    await asegurarAdmin(connection);
+    console.log('\nCreando administrador...');
+    await crearAdmin(connection);
 
     console.log('\nListo: base de datos limpia y lista para producción.\n');
   } catch (error) {
-    console.error('\nError al limpiar la base de datos:', error.message);
+    console.error('\nError al inicializar la base de datos:', error.message);
     process.exitCode = 1;
   } finally {
     await connection.end();
