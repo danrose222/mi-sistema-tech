@@ -1,10 +1,15 @@
 const userModel = require('../models/userModel');
 const bcrypt = require('bcryptjs');
 
+const PASSWORD_MIN_LENGTH = 8;
+
 exports.crear = async (req, res) => {
   try {
     const { username, password, nombre, rol } = req.body;
     if (!username || !password) return res.status(400).json({ error: 'username and password required' });
+    if (password.length < PASSWORD_MIN_LENGTH) {
+      return res.status(400).json({ error: `password must be at least ${PASSWORD_MIN_LENGTH} characters` });
+    }
 
     const existing = await userModel.obtenerUsuarioPorUsername(username);
     if (existing) return res.status(409).json({ error: 'username already exists' });
@@ -50,6 +55,9 @@ exports.actualizar = async (req, res) => {
     if (nombre !== undefined) updates.nombre = nombre;
     if (rol !== undefined) updates.rol = rol;
     if (password) {
+      if (password.length < PASSWORD_MIN_LENGTH) {
+        return res.status(400).json({ error: `password must be at least ${PASSWORD_MIN_LENGTH} characters` });
+      }
       const salt = await bcrypt.genSalt(10);
       updates.password_hash = await bcrypt.hash(password, salt);
     }
