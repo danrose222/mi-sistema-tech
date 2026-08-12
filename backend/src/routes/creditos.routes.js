@@ -4,6 +4,7 @@ const { body, param, query, validationResult } = require('express-validator');
 const { crearCredito, listarCreditos, obtenerDetalleCredito, pagarCuota, eliminarCredito } = require('../services/creditos.service');
 const cuotasRepo = require('../repositories/cuotas.repository');
 const pool = require('../config/database');
+const logError = require('../utils/logError');
 
 const { authenticate, authorizeRole } = require('../middleware/authMiddleware');
 const authMiddleware = authenticate;
@@ -25,7 +26,7 @@ const validarPeticion = (req, res, next) => {
  * y responder con el Status HTTP apropiado (400, 404, 409, 500).
  */
 const handleServiceError = (error, res) => {
-  console.error('[Error de Créditos]:', error);
+  logError('[Error de Créditos]:', error);
   const msg = error.message.toLowerCase();
   
   if (msg.includes('no existe') || msg.includes('no encontrado')) {

@@ -1,5 +1,6 @@
 const cron = require('node-cron');
 const pool = require('../config/database');
+const logError = require('../utils/logError');
 
 const HORAS_EXPIRACION = process.env.CRON_RESERVAS_HORAS_EXPIRACION
   ? Number(process.env.CRON_RESERVAS_HORAS_EXPIRACION)
@@ -56,7 +57,7 @@ async function liberarReservasExpiradas() {
     if (transactionActive) {
       await connection.rollback();
     }
-    console.error('[ReservasCron] Error al liberar reservas vencidas:', error);
+    logError('[ReservasCron] Error al liberar reservas vencidas:', error);
     throw error;
   } finally {
     connection.release();

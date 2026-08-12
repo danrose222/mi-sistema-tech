@@ -6,6 +6,7 @@ const creditosRepo = require('../repositories/creditos.repository');
 const cuotasRepo = require('../repositories/cuotas.repository');
 const cuentasCorrientesRepo = require('../repositories/cuentas-corrientes.repository');
 const notificacionesService = require('./notificaciones.service');
+const logError = require('../utils/logError');
 
 /**
  * Función auxiliar para sumar meses a una fecha.
@@ -152,7 +153,7 @@ async function crearCredito(pool, data, externalConnection = null) {
   } catch (error) {
     if (!externalConnection) {
       await connection.rollback();
-      console.error('[CreditosService] Error al crear crédito, haciendo rollback:', error);
+      logError('[CreditosService] Error al crear crédito, haciendo rollback:', error);
       throw new Error(`Error en la transacción al crear crédito: ${error.message}`);
     }
     // Con conexión externa, el rollback y el mensaje de error los maneja el
@@ -309,7 +310,7 @@ async function pagarCuota(pool, cuotaId, monto, pagoId = null, usuarioId = null)
 
   } catch (error) {
     await connection.rollback();
-    console.error('[CreditosService] Error al pagar cuota:', error);
+    logError('[CreditosService] Error al pagar cuota:', error);
     throw error; // Relanzamos el error original para que el controlador lo maneje
   } finally {
     connection.release();
@@ -369,7 +370,7 @@ async function eliminarCredito(pool, creditoId) {
 
   } catch (error) {
     await connection.rollback();
-    console.error('[CreditosService] Error al eliminar crédito, haciendo rollback:', error);
+    logError('[CreditosService] Error al eliminar crédito, haciendo rollback:', error);
     throw error;
   } finally {
     connection.release();
@@ -478,7 +479,7 @@ async function marcarCuotasVencidas(pool) {
 
   } catch (error) {
     await connection.rollback();
-    console.error('[CreditosService] Error al marcar cuotas vencidas:', error);
+    logError('[CreditosService] Error al marcar cuotas vencidas:', error);
     throw new Error(`Fallo en el proceso de marcar cuotas vencidas: ${error.message}`);
   } finally {
     connection.release();

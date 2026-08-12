@@ -1,8 +1,14 @@
 const mysql = require('mysql2/promise');
 require('dotenv').config();
 
-const dbName = process.env.NODE_ENV === 'test' 
-  ? `${process.env.DB_NAME}_test` 
+const REQUERIDAS = ['DB_HOST', 'DB_USER', 'DB_NAME'];
+const faltantes = REQUERIDAS.filter((clave) => !process.env[clave]);
+if (faltantes.length > 0) {
+  throw new Error(`Faltan variables de entorno críticas: ${faltantes.join(', ')}`);
+}
+
+const dbName = process.env.NODE_ENV === 'test'
+  ? `${process.env.DB_NAME}_test`
   : process.env.DB_NAME;
 
 const pool = mysql.createPool({
@@ -41,6 +47,7 @@ const testConnection = async () => {
         connection.release();
     } catch (error) {
         console.error('❌ Error al conectar con la base de datos:', error.message);
+        process.exit(1); // fail-fast: no seguir aceptando tráfico con la DB inaccesible
     }
 };
 

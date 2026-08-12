@@ -1,4 +1,5 @@
 const pool = require('../config/database');
+const logError = require('../utils/logError');
 
 // El "proveedor" en pagos identifica el medio real: 'efectivo'/'tarjeta'/
 // 'transferencia' vienen de ventas de mostrador (ver crearVentaPos),
@@ -93,7 +94,7 @@ exports.obtenerCajaDiaria = async (req, res) => {
       }
     });
   } catch (err) {
-    console.error(err);
+    logError('[Reportes]', err);
     res.status(500).json({ success: false, error: 'Error al generar el reporte de caja diaria' });
   }
 };

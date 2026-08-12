@@ -1,6 +1,7 @@
 const cron = require('node-cron');
 const alertaService = require('../services/alertaService');
 const whatsappService = require('../services/whatsappService');
+const logError = require('../utils/logError');
 
 const MINUTOS = process.env.CRON_VENCIMIENTOS_MINUTOS || '0';
 const HORAS = process.env.CRON_VENCIMIENTOS_HORAS || '8';
@@ -29,7 +30,7 @@ const enviarRecordatoriosVencidos = async () => {
       await alertaService.marcarAlertaEnviada(pedido.id);
     }
   } catch (error) {
-    console.error('Error en cron de vencimientos:', error);
+    logError('Error en cron de vencimientos:', error);
   }
 };
 

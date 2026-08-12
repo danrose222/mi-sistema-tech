@@ -1,11 +1,12 @@
 const stockModel = require('../models/stockModel');
+const logError = require('../utils/logError');
 
 exports.listarMovimientos = async (req, res) => {
   try {
     const movimientos = await stockModel.obtenerMovimientos();
     res.json(movimientos);
   } catch (error) {
-    console.error(error);
+    logError('[Stock]', error);
     res.status(500).json({ error: 'Error al obtener movimientos de stock' });
   }
 };
@@ -26,7 +27,7 @@ exports.ajustarStock = async (req, res) => {
     if (error.statusCode) {
       return res.status(error.statusCode).json({ error: error.message });
     }
-    console.error(error);
+    logError('[Stock]', error);
     res.status(500).json({ error: 'Error al ajustar stock' });
   }
 };

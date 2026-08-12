@@ -1,5 +1,6 @@
 const whatsappService = require('../services/whatsappService');
 const pedidoModel = require('../models/pedidoModel');
+const logError = require('../utils/logError');
 
 exports.enviarRecordatorio = async (req, res) => {
   try {
@@ -29,7 +30,7 @@ exports.enviarRecordatorio = async (req, res) => {
     const result = await whatsappService.enviarMensaje({ telefono: destinatario, mensaje: texto });
     res.json({ success: true, result });
   } catch (err) {
-    console.error(err);
+    logError('[WhatsApp]', err);
     res.status(500).json({ error: 'Error al enviar mensaje de WhatsApp' });
   }
 };

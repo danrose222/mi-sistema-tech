@@ -2,6 +2,7 @@ const pedidoModel = require('../models/pedidoModel');
 const mercadopagoService = require('../services/mercadopagoService');
 const emailService = require('../services/emailService');
 const creditosService = require('../services/creditos.service');
+const logError = require('../utils/logError');
 
 exports.listarPedidos = async (req, res) => {
   try {
@@ -12,7 +13,7 @@ exports.listarPedidos = async (req, res) => {
     const { data, total } = await pedidoModel.listarPedidosPaginado({ page, limit, estado });
     res.json({ success: true, data, total });
   } catch (err) {
-    console.error(err);
+    logError('[Pedidos]', err);
     res.status(500).json({ success: false, error: 'Error al listar pedidos' });
   }
 };
@@ -25,7 +26,7 @@ exports.obtenerPedido = async (req, res) => {
     const financiacion = await pedidoModel.obtenerFinanciacionPorPedido(req.params.id);
     res.json({ success: true, data: { ...pedido, items, financiacion } });
   } catch (err) {
-    console.error(err);
+    logError('[Pedidos]', err);
     res.status(500).json({ success: false, error: 'Error al obtener pedido' });
   }
 };
@@ -84,7 +85,7 @@ exports.procesarDevolucion = async (req, res) => {
     if (err.statusCode) {
       return res.status(err.statusCode).json({ success: false, error: err.message });
     }
-    console.error(err);
+    logError('[Pedidos]', err);
     res.status(500).json({ success: false, error: 'Error al procesar la devolución' });
   }
 };
@@ -285,7 +286,7 @@ exports.crearPedido = async (req, res) => {
     if (err.statusCode) {
       return res.status(err.statusCode).json({ error: err.message });
     }
-    console.error(err);
+    logError('[Pedidos]', err);
     res.status(500).json({ error: 'Error al crear pedido' });
   }
 };
@@ -454,7 +455,7 @@ exports.crearVentaPos = async (req, res) => {
         const itemsCreados = await pedidoModel.obtenerItemsPorPedido(pedidoId);
         await emailService.enviarComprobanteCompra({ pedido: pedidoCreado, items: itemsCreados, financiacion });
       } catch (errEmail) {
-        console.error(`[POS] Error al enviar el comprobante de crédito por email del pedido #${pedidoId}:`, errEmail);
+        logError(`[POS] Error al enviar el comprobante de crédito por email del pedido #${pedidoId}:`, errEmail);
       }
 
       return res.status(201).json({ pedido_id: pedidoId, total, vuelto: 0, financiacion });
@@ -523,7 +524,7 @@ exports.crearVentaPos = async (req, res) => {
     if (err.statusCode) {
       return res.status(err.statusCode).json({ error: err.message });
     }
-    console.error(err);
+    logError('[Pedidos]', err);
     res.status(500).json({ error: 'Error al registrar la venta' });
   }
 };
@@ -537,7 +538,7 @@ exports.webhookPago = async (req, res) => {
       console.error('[Webhook MP] Firma inválida, notificación rechazada.');
       return res.status(400).json({ error: 'Firma inválida' });
     }
-    console.error('[Webhook MP] Error al validar la notificación:', err);
+    logError('[Webhook MP] Error al validar la notificación:', err);
     return res.status(400).json({ error: 'Webhook inválido' });
   }
 
@@ -566,7 +567,7 @@ exports.webhookPago = async (req, res) => {
   console.log(`[Webhook MP] Procesando pago #${paymentId} en segundo plano...`);
 
   procesarPagoWebhook(paymentId).catch((err) => {
-    console.error(`[Webhook MP] Error al procesar el pago #${paymentId} en segundo plano:`, err);
+    logError(`[Webhook MP] Error al procesar el pago #${paymentId} en segundo plano:`, err);
   });
 };
 
@@ -620,7 +621,7 @@ async function procesarPagoWebhook(paymentId) {
       await emailService.enviarComprobanteCompra({ pedido: pedidoPagado, items: itemsPedido });
       console.log(`[Webhook MP] Comprobante de compra enviado por email para el pedido #${external_reference}.`);
     } catch (err) {
-      console.error(`[Webhook MP] Error al enviar el comprobante por email del pedido #${external_reference}:`, err);
+      logError(`[Webhook MP] Error al enviar el comprobante por email del pedido #${external_reference}:`, err);
     }
   }
 }

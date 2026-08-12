@@ -1,6 +1,7 @@
 const ExcelJS = require('exceljs');
 const pool = require('../config/database');
 const productoModel = require('../models/productoModel');
+const logError = require('../utils/logError');
 
 exports.listarProductos = async (req, res) => {
   try {
@@ -11,7 +12,7 @@ exports.listarProductos = async (req, res) => {
     const { data, total } = await productoModel.obtenerProductosPaginado({ page, limit, search });
     res.json({ success: true, data, total });
   } catch (err) {
-    console.error(err);
+    logError('[Productos]', err);
     res.status(500).json({ success: false, error: 'Error al obtener productos' });
   }
 };
@@ -22,7 +23,7 @@ exports.obtenerProducto = async (req, res) => {
     if (!producto) return res.status(404).json({ success: false, error: 'Producto no encontrado' });
     res.json({ success: true, data: producto });
   } catch (err) {
-    console.error(err);
+    logError('[Productos]', err);
     res.status(500).json({ success: false, error: 'Error al obtener producto' });
   }
 };
@@ -33,7 +34,7 @@ exports.obtenerProductoPorBarcode = async (req, res) => {
     if (!producto) return res.status(404).json({ success: false, error: 'Producto no encontrado' });
     res.json({ success: true, data: producto });
   } catch (err) {
-    console.error(err);
+    logError('[Productos]', err);
     res.status(500).json({ success: false, error: 'Error al obtener producto por barcode' });
   }
 };
@@ -76,7 +77,7 @@ exports.crearProducto = async (req, res) => {
     const producto = await productoModel.obtenerProductoPorId(id);
     res.status(201).json({ success: true, data: producto });
   } catch (err) {
-    console.error(err);
+    logError('[Productos]', err);
     res.status(500).json({ success: false, error: 'Error al crear producto' });
   }
 };
@@ -99,7 +100,7 @@ exports.actualizarProducto = async (req, res) => {
     const producto = await productoModel.obtenerProductoPorId(req.params.id);
     res.json({ success: true, data: producto });
   } catch (err) {
-    console.error(err);
+    logError('[Productos]', err);
     res.status(500).json({ success: false, error: 'Error al actualizar producto' });
   }
 };
@@ -109,7 +110,7 @@ exports.eliminarProducto = async (req, res) => {
     await productoModel.eliminarProducto(req.params.id);
     res.json({ success: true, mensaje: 'Producto eliminado' });
   } catch (err) {
-    console.error(err);
+    logError('[Productos]', err);
     res.status(500).json({ success: false, error: 'Error al eliminar producto' });
   }
 };
@@ -284,7 +285,7 @@ exports.importarProductos = async (req, res) => {
 
     res.status(201).json({ success: true, data: { creados: productosValidos.length } });
   } catch (err) {
-    console.error(err);
+    logError('[Productos]', err);
     res.status(500).json({ success: false, error: 'Error al importar productos' });
   }
 };

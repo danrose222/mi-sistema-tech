@@ -7,6 +7,7 @@ const cuotasRepo = require('../repositories/cuotas.repository');
 const whatsappService = require('../services/whatsappService');
 const { construirMensaje } = require('../services/notificaciones.service');
 const { authenticate } = require('../middleware/authMiddleware');
+const logError = require('../utils/logError');
 
 const authMiddleware = authenticate;
 
@@ -45,7 +46,7 @@ router.post(
         data: { cuotaId: cuota.id, telefono: cuota.cliente_telefono, mensaje }
       });
     } catch (error) {
-      console.error('[Cuotas] Error al enviar recordatorio manual:', error);
+      logError('[Cuotas] Error al enviar recordatorio manual:', error);
       const noConfigurado = error.message && error.message.includes('no configurado');
       return res.status(noConfigurado ? 503 : 500).json({
         success: false,

@@ -1,4 +1,5 @@
 const Cliente = require('../models/clienteModel');
+const logError = require('../utils/logError');
 
 // Valida y normaliza estado_cliente/deuda_historica antes de persistir: un
 // cliente MOROSO necesita una deuda_historica > 0 (si no, no hay nada que
@@ -28,7 +29,7 @@ const clienteController = {
             const { data, total } = await Cliente.obtenerPaginado({ page, limit, search });
             res.json({ success: true, data, total });
         } catch (error) {
-            console.error(error);
+            logError('[Clientes]', error);
             res.status(500).json({ success: false, error: 'Hubo un error al obtener los clientes' });
         }
     },
@@ -60,7 +61,7 @@ const clienteController = {
 
             res.json({ success: true, data: { ...cliente, estado_crediticio } });
         } catch (error) {
-            console.error(error);
+            logError('[Clientes]', error);
             res.status(500).json({ success: false, error: 'Hubo un error al buscar el cliente por DNI' });
         }
     },
@@ -71,7 +72,7 @@ const clienteController = {
             if (!cliente) return res.status(404).json({ success: false, error: 'Cliente no encontrado' });
             res.json({ success: true, data: cliente });
         } catch (error) {
-            console.error(error);
+            logError('[Clientes]', error);
             res.status(500).json({ success: false, error: 'Hubo un error al obtener el cliente' });
         }
     },
@@ -97,7 +98,7 @@ const clienteController = {
             const cliente = await Cliente.obtenerPorId(nuevoCliente.insertId);
             res.status(201).json({ success: true, data: cliente });
         } catch (error) {
-            console.error(error);
+            logError('[Clientes]', error);
             res.status(500).json({ success: false, error: 'Hubo un error al guardar el cliente' });
         }
     },
@@ -116,7 +117,7 @@ const clienteController = {
             const cliente = await Cliente.obtenerPorId(req.params.id);
             res.json({ success: true, data: cliente });
         } catch (error) {
-            console.error(error);
+            logError('[Clientes]', error);
             res.status(500).json({ success: false, error: 'Hubo un error al actualizar el cliente' });
         }
     },
@@ -127,7 +128,7 @@ const clienteController = {
             await Cliente.eliminar(id);
             res.json({ success: true, mensaje: `Cliente número ${id} eliminado con éxito` });
         } catch (error) {
-            console.error(error);
+            logError('[Clientes]', error);
             res.status(500).json({ success: false, error: 'Hubo un error al eliminar el cliente' });
         }
     },
@@ -200,7 +201,7 @@ const clienteController = {
             if (err.statusCode) {
                 return res.status(err.statusCode).json({ success: false, error: err.message });
             }
-            console.error(err);
+            logError('[Clientes]', err);
             res.status(500).json({ success: false, error: 'Error al registrar el pago de la deuda histórica' });
         }
     }

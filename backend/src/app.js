@@ -4,6 +4,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const compression = require('compression');
+const logError = require('./utils/logError');
 
 const app = express();
 
@@ -113,7 +114,7 @@ app.get('/api/health', (req, res) => {
 
 // Middleware Global de Manejo de Errores
 app.use((err, req, res, next) => {
-    console.error('[Global Error]:', err);
+    logError('[Global Error]:', err);
     const statusCode = err.statusCode || 500;
     const message = process.env.NODE_ENV === 'production' 
         ? 'Error interno del servidor' 

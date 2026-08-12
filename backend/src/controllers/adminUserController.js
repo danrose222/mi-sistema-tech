@@ -1,5 +1,6 @@
 const userModel = require('../models/userModel');
 const bcrypt = require('bcryptjs');
+const logError = require('../utils/logError');
 
 const PASSWORD_MIN_LENGTH = 8;
 
@@ -20,7 +21,7 @@ exports.crear = async (req, res) => {
     const usuario = await userModel.obtenerUsuarioPorId(userId);
     res.status(201).json(usuario);
   } catch (err) {
-    console.error(err);
+    logError('[AdminUsuarios]', err);
     res.status(500).json({ error: 'error creating user' });
   }
 };
@@ -30,7 +31,7 @@ exports.listar = async (req, res) => {
     const usuarios = await userModel.listarUsuarios();
     res.json(usuarios);
   } catch (err) {
-    console.error(err);
+    logError('[AdminUsuarios]', err);
     res.status(500).json({ error: 'error listing users' });
   }
 };
@@ -42,7 +43,7 @@ exports.obtener = async (req, res) => {
     if (!usuario) return res.status(404).json({ error: 'not found' });
     res.json(usuario);
   } catch (err) {
-    console.error(err);
+    logError('[AdminUsuarios]', err);
     res.status(500).json({ error: 'error getting user' });
   }
 };
@@ -66,7 +67,7 @@ exports.actualizar = async (req, res) => {
     const updated = await userModel.obtenerUsuarioPorId(id);
     res.json(updated);
   } catch (err) {
-    console.error(err);
+    logError('[AdminUsuarios]', err);
     res.status(500).json({ error: 'error updating user' });
   }
 };
@@ -78,7 +79,7 @@ exports.borrar = async (req, res) => {
     if (!affected) return res.status(404).json({ error: 'not found' });
     res.json({ success: true });
   } catch (err) {
-    console.error(err);
+    logError('[AdminUsuarios]', err);
     res.status(500).json({ error: 'error deleting user' });
   }
 };

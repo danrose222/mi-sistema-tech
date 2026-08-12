@@ -1,4 +1,5 @@
 const productoModel = require('../models/productoModel');
+const logError = require('../utils/logError');
 
 function quitarAcentos(text) {
   return text
@@ -42,7 +43,7 @@ exports.listarProductos = async (req, res) => {
     const { data, total } = await productoModel.obtenerProductosPublicoPaginado({ page, limit, search });
     res.json({ success: true, data: data.map(toPublico), total });
   } catch (err) {
-    console.error(err);
+    logError('[Publico]', err);
     res.status(500).json({ success: false, error: 'Error al obtener productos' });
   }
 };
@@ -57,7 +58,7 @@ exports.obtenerProductoPorSlug = async (req, res) => {
 
     res.json({ success: true, data: toPublico(producto) });
   } catch (err) {
-    console.error(err);
+    logError('[Publico]', err);
     res.status(500).json({ success: false, error: 'Error al obtener producto' });
   }
 };
@@ -108,7 +109,7 @@ ${entradas}
 
     res.type('application/xml').send(xml);
   } catch (err) {
-    console.error(err);
+    logError('[Publico]', err);
     res.status(500).json({ success: false, error: 'Error al generar el sitemap' });
   }
 };

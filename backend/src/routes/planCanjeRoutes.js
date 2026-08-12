@@ -1,7 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const planCanjeController = require('../controllers/planCanjeController');
-const { authenticate } = require('../middleware/authMiddleware');
+const { authenticate, authorizeRole } = require('../middleware/authMiddleware');
+
+const adminOnly = authorizeRole(['admin']);
 
 // Todo el módulo es interno del panel admin: los contactos llegan por
 // WhatsApp y el admin carga/actualiza las operaciones a mano, no hay
@@ -12,6 +14,6 @@ router.get('/', planCanjeController.listar);
 router.get('/:id', planCanjeController.obtener);
 router.post('/', planCanjeController.crear);
 router.put('/:id', planCanjeController.actualizar);
-router.delete('/:id', planCanjeController.eliminar);
+router.delete('/:id', adminOnly, planCanjeController.eliminar);
 
 module.exports = router;

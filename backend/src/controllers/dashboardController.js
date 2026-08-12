@@ -1,5 +1,6 @@
 const pool = require('../config/database');
 const cuotasRepo = require('../repositories/cuotas.repository');
+const logError = require('../utils/logError');
 
 exports.obtenerResumen = async (req, res) => {
   try {
@@ -36,7 +37,7 @@ exports.obtenerResumen = async (req, res) => {
       }
     });
   } catch (err) {
-    console.error(err);
+    logError('[Dashboard]', err);
     res.status(500).json({ success: false, error: 'Error al obtener el resumen del dashboard' });
   }
 };
@@ -82,7 +83,7 @@ exports.obtenerVentasMes = async (req, res) => {
       data: { total_recaudado, total_productos, desglose }
     });
   } catch (err) {
-    console.error(err);
+    logError('[Dashboard]', err);
     res.status(500).json({ success: false, error: 'Error al obtener el desglose de ventas del mes' });
   }
 };

@@ -1,6 +1,7 @@
 const userModel = require('../models/userModel');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const logError = require('../utils/logError');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
@@ -24,7 +25,7 @@ exports.login = async (req, res) => {
       usuario: { id: user.id, username: user.username, nombre: user.nombre, rol: user.rol } 
     });
   } catch (err) {
-    console.error(err);
+    logError('[Auth]', err);
     res.status(500).json({ error: 'error logging in' });
   }
 };

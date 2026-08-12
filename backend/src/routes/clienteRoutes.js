@@ -1,7 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const clienteController = require('../controllers/clienteController');
-const { authenticate } = require('../middleware/authMiddleware');
+const { authenticate, authorizeRole } = require('../middleware/authMiddleware');
+
+const adminOnly = authorizeRole(['admin']);
 
 router.use(authenticate);
 
@@ -14,6 +16,6 @@ router.post('/', clienteController.registrarCliente);
 router.put('/:id', clienteController.actualizarCliente);
 router.put('/:id/pagar-deuda', clienteController.pagarDeuda);
 
-router.delete('/:id', clienteController.eliminarCliente);
+router.delete('/:id', adminOnly, clienteController.eliminarCliente);
 
 module.exports = router;

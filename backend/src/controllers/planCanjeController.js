@@ -1,4 +1,5 @@
 const PlanCanje = require('../models/planCanjeModel');
+const logError = require('../utils/logError');
 
 const ESTADOS_VALIDOS = ['pendiente_revision', 'tasado', 'aceptado', 'rechazado', 'completado'];
 const CONDICIONES_VALIDAS = ['excelente', 'bueno', 'regular', 'malo'];
@@ -68,7 +69,7 @@ const planCanjeController = {
       const { data, total } = await PlanCanje.listarPaginado({ page, limit, estado });
       res.json({ success: true, data, total });
     } catch (error) {
-      console.error(error);
+      logError('[PlanCanje]', error);
       res.status(500).json({ success: false, error: 'Hubo un error al obtener las operaciones de Plan Canje' });
     }
   },
@@ -79,7 +80,7 @@ const planCanjeController = {
       if (!registro) return res.status(404).json({ success: false, error: 'Operación de Plan Canje no encontrada' });
       res.json({ success: true, data: registro });
     } catch (error) {
-      console.error(error);
+      logError('[PlanCanje]', error);
       res.status(500).json({ success: false, error: 'Hubo un error al obtener la operación' });
     }
   },
@@ -110,7 +111,7 @@ const planCanjeController = {
       if (error.code === 'ER_NO_REFERENCED_ROW_2' || error.code === 'ER_NO_REFERENCED_ROW') {
         return res.status(400).json({ success: false, error: 'El pedido vinculado no existe' });
       }
-      console.error(error);
+      logError('[PlanCanje]', error);
       res.status(500).json({ success: false, error: 'Hubo un error al registrar la operación de Plan Canje' });
     }
   },
@@ -130,7 +131,7 @@ const planCanjeController = {
       if (error.code === 'ER_NO_REFERENCED_ROW_2' || error.code === 'ER_NO_REFERENCED_ROW') {
         return res.status(400).json({ success: false, error: 'El pedido vinculado no existe' });
       }
-      console.error(error);
+      logError('[PlanCanje]', error);
       res.status(500).json({ success: false, error: 'Hubo un error al actualizar la operación' });
     }
   },
@@ -143,7 +144,7 @@ const planCanjeController = {
       await PlanCanje.eliminar(req.params.id);
       res.json({ success: true, mensaje: `Operación número ${req.params.id} eliminada con éxito` });
     } catch (error) {
-      console.error(error);
+      logError('[PlanCanje]', error);
       res.status(500).json({ success: false, error: 'Hubo un error al eliminar la operación' });
     }
   }
