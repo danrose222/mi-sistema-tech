@@ -14,6 +14,7 @@ Es un monorepo con una API backend (Node.js + Express + MySQL) y dos frentes Ang
 | **Clientes (CRM)** | Base de clientes unificada entre la venta online y la de mostrador (por DNI), con buscador rápido, estado crediticio (Al día / Moroso) y seguimiento de deuda histórica migrada de sistemas anteriores, con cobro registrado en Caja Diaria. |
 | **Cobranzas** | Cron diario que revisa cuotas por vencer o vencidas y envía recordatorios de pago por WhatsApp, con envío manual también disponible desde el detalle del crédito. |
 | **Catálogo público** | Storefront con SSR, sincronizado en tiempo real con el stock del panel, carrito con retiro en local o envío a domicilio (envío gratis desde $100.000, costo fijo por debajo) y checkout con MercadoPago, transferencia o efectivo en local. |
+| **Plan Canje** | Registro y seguimiento de operaciones donde el cliente entrega un equipo usado como parte de pago: tasación, condición del equipo entregado y a llevar, condición de pago de la diferencia, y vínculo con el pedido final una vez completada la operación. |
 
 ## Stack Tecnológico
 
@@ -72,22 +73,21 @@ cp .env.production.example .env
 
 Completar `.env` con las credenciales reales (base de datos, JWT, MercadoPago, WhatsApp, SMTP y el dominio del sitio). Ver el detalle de cada variable en [`backend/.env.production.example`](backend/.env.production.example).
 
-Crear la base de datos vacía en MySQL (el nombre debe coincidir con `DB_NAME`):
+Crear la base de datos y el usuario dedicado en MySQL (deben coincidir con `DB_NAME`/`DB_USER`/`DB_PASSWORD` del `.env`):
 
 ```sql
-CREATE DATABASE cel_shop_center_db;
+CREATE DATABASE cel_shop_center_db CHARACTER SET utf8mb4;
+CREATE USER 'cel_shop_center_prod'@'localhost' IDENTIFIED BY 'una-contraseña-fuerte';
+GRANT ALL PRIVILEGES ON cel_shop_center_db.* TO 'cel_shop_center_prod'@'localhost';
+FLUSH PRIVILEGES;
 ```
 
-Levantar el servidor una primera vez para que aplique las migraciones automáticamente, y dejarlo corriendo con un gestor de procesos:
+Las migraciones se aplican solas al arrancar el servidor (ver paso 4, `pm2 start deploy/ecosystem.config.js`) — no hace falta un arranque manual aparte.
+
+Antes del primer arranque en producción, correr el seeder para dejar la base sin datos de prueba y crear el único usuario administrador (ver [`backend/scripts/cleanDb.js`](backend/scripts/cleanDb.js) para el detalle completo — es destructivo y pensado para correr **una sola vez**, antes del primer deploy, no como mantenimiento):
 
 ```bash
-pm2 start src/server.js --name cel-shop-backend
-```
-
-Si el servidor vino de un período de pruebas y hay que arrancar con los datos en cero (manteniendo el usuario administrador), correr:
-
-```bash
-npm run db:clean
+ADMIN_USERNAME=admin ADMIN_INITIAL_PASSWORD=una-contraseña-de-al-menos-8-caracteres npm run db:clean -- --force
 ```
 
 ### 3. Frontend
@@ -157,6 +157,7 @@ backend/
     repositories/        # Acceso a datos (queries SQL)
     routes/               # Definición de endpoints /api/*
     middleware/           # Autenticación, validaciones, subida de imágenes
+    utils/                # Utilidades compartidas (ej. logError, para no filtrar datos sensibles a los logs)
 
 frontend/
   src/app/
@@ -171,11 +172,13 @@ frontend/
 | Recurso | Descripción |
 | --- | --- |
 | `/auth` | Login y emisión de tokens JWT |
+| `/admin/usuarios` | CRUD de usuarios del panel (solo rol admin) |
 | `/clientes` | CRUD de clientes, búsqueda por DNI y estado crediticio |
 | `/productos` | Catálogo, inventario y subida de imágenes |
 | `/pedidos` | Pedidos (web y POS), pasarela de pago, devoluciones |
 | `/creditos` | Créditos, cuotas, anulación |
 | `/cuotas` | Registro de pago y envío manual de recordatorio |
+| `/plan-canje` | Registro y seguimiento de operaciones de Plan Canje |
 | `/stock` | Movimientos e identificación de productos |
 | `/reportes` | Caja diaria y reportes operativos |
 | `/whatsapp` | Envío de notificaciones |
@@ -197,4 +200,4 @@ Todas las credenciales (base de datos, JWT, MercadoPago, WhatsApp, SMTP) se leen
 | `npm start` | Servidor en modo producción |
 | `npm test` | Suite de tests de integración |
 | `npm run seed` | Carga datos de prueba |
-| `npm run db:clean` | Vacía ventas/stock/créditos/clientes y preserva (o regenera) el administrador principal |
+| `npm run db:clean` | Seeder de un solo uso para el primer deploy: vacía **todas** las tablas (incluidos usuarios) y crea un único admin desde `ADMIN_USERNAME`/`ADMIN_INITIAL_PASSWORD` |
