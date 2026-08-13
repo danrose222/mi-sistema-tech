@@ -94,7 +94,7 @@ import { CookieConsentComponent } from '../cookie-consent/cookie-consent.compone
             </div>
             <div class="contact-item">
               <mat-icon>chat</mat-icon>
-              <a href="https://wa.me/5493548547661" target="_blank" rel="noopener">+54 9 3548 54-7661</a>
+              <a href="https://wa.me/5493548544757" target="_blank" rel="noopener">+54 9 3548 54-4757</a>
             </div>
             <div class="contact-item">
               <mat-icon>call</mat-icon>
@@ -102,7 +102,7 @@ import { CookieConsentComponent } from '../cookie-consent/cookie-consent.compone
             </div>
             <div class="contact-item">
               <mat-icon>mail</mat-icon>
-              <a href="mailto:ventas@celshop.com.ar">ventas&#64;celshop.com.ar</a>
+              <a href="mailto:ventas@celshopcenter.com.ar">ventas&#64;celshopcenter.com.ar</a>
             </div>
           </div>
         </div>

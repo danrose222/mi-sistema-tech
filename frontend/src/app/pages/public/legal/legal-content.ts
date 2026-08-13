@@ -9,9 +9,9 @@ export interface PaginaLegal {
   secciones: SeccionLegal[];
 }
 
-// Plantillas genéricas para e-commerce argentino. [COMPLETAR] marca los datos
-// que faltan (razón social y CUIT reales) y deben revisarse con un abogado
-// antes de publicar el sitio.
+// Plantillas genéricas para e-commerce argentino, con los datos reales del
+// titular (Sergio Sebastian Samarra, CUIL 20-27740871-7). Deben revisarse
+// con un abogado antes de publicar el sitio.
 export const CONTENIDO_LEGAL: Record<string, PaginaLegal> = {
   terminos: {
     titulo: 'Términos y Condiciones',
@@ -20,7 +20,7 @@ export const CONTENIDO_LEGAL: Record<string, PaginaLegal> = {
       {
         titulo: '1. Objeto',
         parrafos: [
-          'Estos Términos y Condiciones regulan el uso del sitio web y la compra de productos ofrecidos por CEL SHOP CENTER ([COMPLETAR: razón social], CUIT [COMPLETAR]), con domicilio en Dean Funes 463, Capilla del Monte, Córdoba, Argentina. Al utilizar el sitio o realizar una compra, el usuario acepta estos términos en su totalidad.'
+          'Estos Términos y Condiciones regulan el uso del sitio web y la compra de productos ofrecidos por CEL SHOP CENTER (Sergio Sebastian Samarra, CUIL 20-27740871-7), con domicilio en Dean Funes 463, Capilla del Monte, Córdoba, Argentina. Al utilizar el sitio o realizar una compra, el usuario acepta estos términos en su totalidad.'
         ]
       },
       {
@@ -68,7 +68,7 @@ export const CONTENIDO_LEGAL: Record<string, PaginaLegal> = {
       {
         titulo: '1. Responsable del tratamiento',
         parrafos: [
-          'CEL SHOP CENTER ([COMPLETAR: razón social], CUIT [COMPLETAR]), con domicilio en Dean Funes 463, Capilla del Monte, Córdoba, es responsable del tratamiento de los datos personales recolectados a través de este sitio. Contacto: ventas@celshop.com.ar.'
+          'CEL SHOP CENTER (Sergio Sebastian Samarra, CUIL 20-27740871-7), con domicilio en Dean Funes 463, Capilla del Monte, Córdoba, es responsable del tratamiento de los datos personales recolectados a través de este sitio. Contacto: ventas@celshopcenter.com.ar.'
         ]
       },
       {
@@ -92,7 +92,7 @@ export const CONTENIDO_LEGAL: Record<string, PaginaLegal> = {
       {
         titulo: '5. Derechos del titular de los datos',
         parrafos: [
-          'Conforme la Ley 25.326 de Protección de Datos Personales, el titular puede ejercer sus derechos de acceso, rectificación, actualización y supresión de sus datos escribiendo a ventas@celshop.com.ar. La Agencia de Acceso a la Información Pública (AAIP), en su carácter de Órgano de Control, tiene la atribución de atender denuncias y reclamos que interpongan quienes resulten afectados en sus derechos.'
+          'Conforme la Ley 25.326 de Protección de Datos Personales, el titular puede ejercer sus derechos de acceso, rectificación, actualización y supresión de sus datos escribiendo a ventas@celshopcenter.com.ar. La Agencia de Acceso a la Información Pública (AAIP), en su carácter de Órgano de Control, tiene la atribución de atender denuncias y reclamos que interpongan quienes resulten afectados en sus derechos.'
         ]
       },
       {

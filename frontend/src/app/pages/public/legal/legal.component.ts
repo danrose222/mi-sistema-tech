@@ -26,8 +26,8 @@ import { CONTENIDO_LEGAL, PaginaLegal } from './legal-content';
 
         @if (esArrepentimiento) {
           <div class="contacto-arrepentimiento">
-            <a href="https://wa.me/5493548547661" target="_blank" rel="noopener">WhatsApp: +54 9 3548 54-7661</a>
-            <a href="mailto:ventas@celshop.com.ar">ventas&#64;celshop.com.ar</a>
+            <a href="https://wa.me/5493548544757" target="_blank" rel="noopener">WhatsApp: +54 9 3548 54-4757</a>
+            <a href="mailto:ventas@celshopcenter.com.ar">ventas&#64;celshopcenter.com.ar</a>
             <a href="tel:+5493548544757">Tel: +54 9 3548 54-4757</a>
           </div>
         }
