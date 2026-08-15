@@ -52,7 +52,7 @@ const ETIQUETAS_ESTADO: Record<string, string> = {
       <div class="filters-container">
         <mat-form-field appearance="outline" class="filter-field">
           <mat-label>Filtrar por estado</mat-label>
-          <mat-select [(value)]="estadoFiltro" (selectionChange)="onFiltroChange()">
+          <mat-select [(value)]="estadoFiltro" (selectionChange)="onFiltroChange()" panelClass="plan-canje-estado-filtro-panel">
             <mat-option value="">Todos</mat-option>
             <mat-option value="pendiente_revision">Pendiente de revisión</mat-option>
             <mat-option value="tasado">Tasado</mat-option>
@@ -165,6 +165,59 @@ const ETIQUETAS_ESTADO: Record<string, string> = {
     .page-title { margin: 0; color: #1e293b; font-weight: 600; }
     .filters-container { display: flex; margin-top: 8px; }
     .filter-field { width: 240px; }
+    /* Mismo patrón que el buscador de Clientes/Productos/Pedidos: el select
+       vive sobre el fondo oscuro de la página (--void), no dentro de una
+       tarjeta blanca. Material pinta el texto con el color oscuro de su tema
+       por defecto -> ilegible. Se fuerza alto contraste. */
+    .filter-field ::ng-deep .mat-mdc-text-field-wrapper {
+      background-color: var(--slate);
+      border-radius: var(--radius-sm);
+    }
+    .filter-field ::ng-deep .mat-mdc-select-value,
+    .filter-field ::ng-deep .mat-mdc-select-value-text {
+      color: var(--white) !important;
+    }
+    .filter-field ::ng-deep .mat-mdc-select-arrow {
+      color: var(--ash);
+    }
+    .filter-field ::ng-deep .mat-mdc-floating-label {
+      color: var(--ash) !important;
+    }
+    .filter-field ::ng-deep .mdc-notched-outline__leading,
+    .filter-field ::ng-deep .mdc-notched-outline__notch,
+    .filter-field ::ng-deep .mdc-notched-outline__trailing {
+      border-color: var(--border-dim) !important;
+    }
+    .filter-field ::ng-deep .mat-mdc-form-field.mat-focused .mdc-notched-outline__leading,
+    .filter-field ::ng-deep .mat-mdc-form-field.mat-focused .mdc-notched-outline__notch,
+    .filter-field ::ng-deep .mat-mdc-form-field.mat-focused .mdc-notched-outline__trailing {
+      border-color: var(--signal) !important;
+      border-width: 2px;
+    }
+    /* El panel desplegable del mat-select se renderiza en un CDK overlay
+       adjunto al final del <body>, fuera del árbol DOM de este componente
+       -> no es alcanzable con ".filter-field ::ng-deep ...". Por eso se usa
+       panelClass="plan-canje-estado-filtro-panel" en el <mat-select> del
+       template y se apunta a esa clase con un ::ng-deep sin ancestro (estilo
+       global, pero acotado únicamente a este panel gracias a la clase única). */
+    ::ng-deep .plan-canje-estado-filtro-panel {
+      background-color: var(--slate) !important;
+    }
+    ::ng-deep .plan-canje-estado-filtro-panel .mat-mdc-option .mdc-list-item__primary-text {
+      color: var(--white) !important;
+    }
+    ::ng-deep .plan-canje-estado-filtro-panel .mat-mdc-option:hover:not(.mdc-list-item--disabled),
+    ::ng-deep .plan-canje-estado-filtro-panel .mat-mdc-option.mat-mdc-option-active {
+      background-color: rgba(0, 174, 239, 0.12) !important;
+    }
+    ::ng-deep .plan-canje-estado-filtro-panel .mat-mdc-option:hover:not(.mdc-list-item--disabled) .mdc-list-item__primary-text,
+    ::ng-deep .plan-canje-estado-filtro-panel .mat-mdc-option.mat-mdc-option-active .mdc-list-item__primary-text {
+      color: var(--signal) !important;
+    }
+    ::ng-deep .plan-canje-estado-filtro-panel .mat-mdc-option.mdc-list-item--selected .mdc-list-item__primary-text {
+      color: var(--signal) !important;
+      font-weight: 600;
+    }
     .table-container { position: relative; background: white; border-radius: 8px; overflow-x: auto; overflow-y: hidden; }
     .loading-shade {
       position: absolute; top: 0; left: 0; bottom: 0; right: 0;

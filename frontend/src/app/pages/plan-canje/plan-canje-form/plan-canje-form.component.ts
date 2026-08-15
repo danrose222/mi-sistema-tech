@@ -177,7 +177,7 @@ const ESTADOS_QUE_REQUIEREN_VALOR = ['tasado', 'aceptado', 'completado'];
       flex-direction: column;
       gap: 16px;
       padding-top: 8px;
-      min-width: 460px;
+      min-width: min(460px, 100%);
     }
     .seccion-titulo {
       margin: 8px 0 -4px;

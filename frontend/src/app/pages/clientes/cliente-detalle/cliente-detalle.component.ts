@@ -101,7 +101,7 @@ import { PagoDeudaHistoricaDialogComponent } from '../pago-deuda-historica-dialo
       display: flex;
       flex-direction: column;
       gap: 20px;
-      min-width: 450px;
+      min-width: min(450px, 100%);
       padding-top: 8px;
     }
     .info-card h3 {

@@ -105,7 +105,7 @@ import { ClientesService } from '../../../services/clientes.service';
       flex-direction: column;
       gap: 16px;
       padding-top: 12px;
-      min-width: 400px;
+      min-width: min(400px, 100%);
     }
     .full-width {
       width: 100%;

@@ -134,7 +134,7 @@ import { ProductosService, Producto } from '../../../services/productos.service'
       flex-direction: column;
       gap: 16px;
       padding-top: 12px;
-      min-width: 420px;
+      min-width: min(420px, 100%);
     }
     .full-width { width: 100%; }
     .form-row {

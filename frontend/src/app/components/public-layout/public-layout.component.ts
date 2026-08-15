@@ -50,7 +50,6 @@ import { CookieConsentComponent } from '../cookie-consent/cookie-consent.compone
             </button>
             <mat-menu #menu="matMenu">
               <button mat-menu-item routerLink="/productos">Catálogo</button>
-              <button mat-menu-item routerLink="/login">Administración</button>
             </mat-menu>
           </nav>
         </div>
@@ -90,7 +89,7 @@ import { CookieConsentComponent } from '../cookie-consent/cookie-consent.compone
             <p class="footer-financiacion">Financiación en cuotas con solo DNI. Aprobación rápida.</p>
             <div class="contact-item">
               <mat-icon>location_on</mat-icon>
-              <span>Dean Funes 463, Capilla del Monte, Córdoba</span>
+              <a href="https://www.google.com/maps/search/?api=1&query=Dean+Funes+463%2C+Capilla+del+Monte%2C+C%C3%B3rdoba" target="_blank" rel="noopener">Dean Funes 463, Capilla del Monte, Córdoba</a>
             </div>
             <div class="contact-item">
               <mat-icon>chat</mat-icon>

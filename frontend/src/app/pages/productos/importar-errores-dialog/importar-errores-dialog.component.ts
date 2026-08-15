@@ -35,7 +35,7 @@ export interface FilaConError {
     </mat-dialog-actions>
   `,
   styles: [`
-    mat-dialog-content { min-width: 420px; max-width: 520px; }
+    mat-dialog-content { min-width: min(420px, 100%); max-width: 520px; }
     .mensaje-general {
       color: #334155;
       margin: 8px 0 0;

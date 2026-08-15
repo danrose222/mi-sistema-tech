@@ -175,7 +175,7 @@ import { ConfirmarDevolucionDialogComponent } from './confirmar-devolucion-dialo
   `,
   styles: [`
     .loading-container { display: flex; justify-content: center; align-items: center; padding: 60px 0; }
-    .detalle-container { display: flex; flex-direction: column; gap: 20px; min-width: 500px; padding-top: 8px; }
+    .detalle-container { display: flex; flex-direction: column; gap: 20px; min-width: min(500px, 100%); padding-top: 8px; }
     .info-card h3 { margin-top: 0; margin-bottom: 12px; color: #3f51b5; font-size: 1.1rem; }
     .info-row { display: flex; margin-bottom: 8px; font-size: 0.95rem; }
     .label { font-weight: 500; width: 120px; color: #555; }
