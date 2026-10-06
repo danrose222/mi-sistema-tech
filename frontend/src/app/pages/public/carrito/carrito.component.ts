@@ -70,7 +70,7 @@ import { ResumenTotalesComponent } from '../../../components/resumen-totales/res
                 <app-resumen-totales
                   [subtotal]="carrito.totalPrecio()"
                   [labelSubtotal]="'Productos (' + carrito.totalItems() + ')'"
-                  [costoEnvio]="0"
+                  [costoEnvio]="null"
                   [total]="carrito.totalPrecio()">
                 </app-resumen-totales>
               </mat-card-content>

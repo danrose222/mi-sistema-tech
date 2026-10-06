@@ -47,7 +47,7 @@ import { ProductoCardComponent } from '../../../components/producto-card/product
           Tecnología al mejor precio · Envío a todo el país
         </span>
         <h1>El futuro de la tecnología<br><span class="text-gradient">está en tus manos.</span></h1>
-        <p class="hero-sub">Financiación en cuotas sin interés · Envío gratis a todo el país · Garantía oficial de 12 meses.</p>
+        <p class="hero-sub">Financiación en cuotas sin interés · Envío gratis desde $100.000 · Garantía oficial de 12 meses.</p>
         <div class="hero-actions">
           <a routerLink="/productos" class="btn-primary btn-lg">
             Explorar catálogo

@@ -20,7 +20,9 @@ import { CommonModule } from '@angular/common';
       }
       <div class="summary-row">
         <span>Envío</span>
-        @if (costoEnvio() === 0) {
+        @if (costoEnvio() === null) {
+          <span class="envio-pendiente">Se calcula en el checkout</span>
+        } @else if (costoEnvio() === 0) {
           <span class="free-shipping">Gratis</span>
         } @else {
           <span>{{ costoEnvio() | currency:'ARS' }}</span>
@@ -45,6 +47,7 @@ import { CommonModule } from '@angular/common';
       font-size: 1.1rem;
     }
     .free-shipping { color: var(--success); font-weight: 600; }
+    .envio-pendiente { font-size: 0.95rem; }
     .summary-row.total {
       font-size: 1.5rem;
       font-weight: 700;
@@ -59,7 +62,9 @@ import { CommonModule } from '@angular/common';
 export class ResumenTotalesComponent {
   subtotal = input<number | null>(null);
   labelSubtotal = input('Productos');
-  costoEnvio = input(0);
+  // null = todavía no se eligió método de entrega (ej. en el Carrito), así
+  // que no se puede afirmar que el envío sea gratis ni cuánto cuesta.
+  costoEnvio = input<number | null>(0);
   total = input(0);
   labelTotal = input('Total');
 }

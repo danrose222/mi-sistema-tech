@@ -27,6 +27,8 @@ test.describe('Catálogo público', () => {
 
     await expect(page.getByRole('heading', { name: 'Mi Carrito' })).toBeVisible();
     await expect(page.getByRole('heading', { name: CABLE.nombre })).toBeVisible();
+    // Sin método de entrega elegido todavía, no se promete envío gratis.
+    await expect(page.getByText('Se calcula en el checkout')).toBeVisible();
     await page.getByRole('button', { name: 'Continuar compra' }).click();
 
     await expect(page.getByRole('heading', { name: 'Finalizar Compra' })).toBeVisible();

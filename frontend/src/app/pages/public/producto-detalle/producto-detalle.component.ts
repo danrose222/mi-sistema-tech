@@ -100,7 +100,7 @@ import { CarritoService } from '../../../services/carrito.service';
             </div>
 
             <div class="features-list">
-              <div class="feat"><mat-icon>local_shipping</mat-icon> <span>Envío gratis a todo el país</span></div>
+              <div class="feat"><mat-icon>local_shipping</mat-icon> <span>Envío gratis en compras desde $100.000</span></div>
               <div class="feat"><mat-icon>verified</mat-icon> <span>Garantía oficial de 12 meses</span></div>
               <div class="feat"><mat-icon>assignment_return</mat-icon> <span>Devolución gratis por 30 días</span></div>
             </div>
