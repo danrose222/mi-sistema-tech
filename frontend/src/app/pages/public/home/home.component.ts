@@ -261,12 +261,12 @@ import { ProductoCardComponent } from '../../../components/producto-card/product
       font-weight: 600;
       letter-spacing: 0.01em;
       margin-bottom: 24px;
+      animation: fadeInUp 0.6s ease both;
     }
     .pulse-dot {
       width: 7px; height: 7px;
       border-radius: 50%;
       background: var(--signal);
-      box-shadow: 0 0 0 0 rgba(0, 174, 239, 0.6);
       animation: pulseDot 2s infinite;
     }
     @keyframes pulseDot {
@@ -283,6 +283,7 @@ import { ProductoCardComponent } from '../../../components/producto-card/product
       color: var(--white);
       margin: 0 0 20px 0;
       max-width: 720px;
+      animation: fadeInUp 0.6s ease 0.08s both;
     }
     .text-gradient {
       background: linear-gradient(90deg, var(--signal), var(--pulse));
@@ -296,11 +297,13 @@ import { ProductoCardComponent } from '../../../components/producto-card/product
       line-height: 1.6;
       margin: 0 0 36px 0;
       max-width: 520px;
+      animation: fadeInUp 0.6s ease 0.16s both;
     }
     .hero-actions {
       display: flex;
       gap: 16px;
       flex-wrap: wrap;
+      animation: fadeInUp 0.6s ease 0.24s both;
     }
     .btn-lg { padding: 14px 32px; font-size: 1rem; }
 
@@ -309,10 +312,6 @@ import { ProductoCardComponent } from '../../../components/producto-card/product
       from { opacity: 0; transform: translateY(16px); }
       to { opacity: 1; transform: translateY(0); }
     }
-    .hero-badge { animation: fadeInUp 0.6s ease both; }
-    .hero h1 { animation: fadeInUp 0.6s ease 0.08s both; }
-    .hero-sub { animation: fadeInUp 0.6s ease 0.16s both; }
-    .hero-actions { animation: fadeInUp 0.6s ease 0.24s both; }
 
     /* ── Trust strip ────────────────────── */
     .trust-strip {
