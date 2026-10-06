@@ -93,11 +93,17 @@ import { CookieConsentComponent } from '../cookie-consent/cookie-consent.compone
             </div>
             <div class="contact-item">
               <mat-icon>chat</mat-icon>
-              <a href="https://wa.me/5493548544757" target="_blank" rel="noopener">+54 9 3548 54-4757</a>
+              <div class="contact-multi">
+                <a href="https://wa.me/5493548544757" target="_blank" rel="noopener">+54 9 3548 54-4757</a>
+                <a href="https://wa.me/5493548547661" target="_blank" rel="noopener">+54 9 3548 54-7661</a>
+              </div>
             </div>
             <div class="contact-item">
               <mat-icon>call</mat-icon>
-              <a href="tel:+5493548544757">+54 9 3548 54-4757</a>
+              <div class="contact-multi">
+                <a href="tel:+5493548544757">+54 9 3548 54-4757</a>
+                <a href="tel:+5493548547661">+54 9 3548 54-7661</a>
+              </div>
             </div>
             <div class="contact-item">
               <mat-icon>mail</mat-icon>
@@ -286,6 +292,11 @@ import { CookieConsentComponent } from '../cookie-consent/cookie-consent.compone
       transition: color 0.15s;
     }
     .contact-item a:hover { color: var(--pulse); }
+    .contact-multi {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
     .footer-col ul {
       list-style: none;
       padding: 0;
