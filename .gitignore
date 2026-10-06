@@ -28,3 +28,6 @@ dist/
 build/
 tmp/
 out-tsc/
+
+# Documentos comerciales entregados al cliente (no van al repo)
+docs/PROPUESTA_DE_MODERNIZACION.pdf
