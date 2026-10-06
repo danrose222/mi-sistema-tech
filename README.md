@@ -144,6 +144,18 @@ Para probar el diseño responsivo desde un celular en la misma red Wi-Fi:
 npm run serve:lan
 ```
 
+### 3. Tests end-to-end (Playwright)
+
+```bash
+cd frontend
+npx playwright install chromium   # solo la primera vez
+npm run e2e                        # o `npm run e2e -- --ui` para el modo interactivo
+```
+
+La suite ([`frontend/e2e/`](frontend/e2e/)) levanta su propio entorno aislado: backend en el puerto `3100` y frontend en el `4300`, contra una base descartable `cel_shop_center_db_e2e` que se recrea y se carga con el seed en cada corrida ([`backend/scripts/prepareE2eDb.js`](backend/scripts/prepareE2eDb.js)). No toca la base de desarrollo y fuerza vacías las credenciales de WhatsApp, MercadoPago, SMTP y Andreani. Solo necesita que MySQL esté corriendo con las credenciales de `backend/.env`.
+
+Cubre login y protección de rutas del admin, alta de productos, venta en Caja con lector de código de barras (descuento de stock incluido) y compra en el catálogo público hasta la confirmación del pedido.
+
 ## Estructura del repositorio
 
 ```text

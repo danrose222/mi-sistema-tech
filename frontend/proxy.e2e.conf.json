@@ -1,0 +1,23 @@
+{
+  "/api": {
+    "target": "http://localhost:3100",
+    "secure": false,
+    "changeOrigin": true,
+    "pathRewrite": {
+      "^/api": "/api"
+    }
+  },
+  "/uploads": {
+    "target": "http://localhost:3100",
+    "secure": false,
+    "changeOrigin": true
+  },
+  "/sitemap.xml": {
+    "target": "http://localhost:3100",
+    "secure": false,
+    "changeOrigin": true,
+    "pathRewrite": {
+      "^/sitemap.xml": "/api/publico/sitemap.xml"
+    }
+  }
+}
