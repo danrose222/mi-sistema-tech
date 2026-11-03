@@ -47,7 +47,7 @@ import { ProductoCardComponent } from '../../../components/producto-card/product
           Tecnología al mejor precio · Envío a todo el país
         </span>
         <h1>El futuro de la tecnología<br><span class="text-gradient">está en tus manos.</span></h1>
-        <p class="hero-sub">Financiación en cuotas sin interés · Envío gratis desde $100.000 · Garantía oficial de 12 meses.</p>
+        <p class="hero-sub">Cuotas con todas las tarjetas · Envío gratis desde $100.000 · Garantía oficial de 12 meses.</p>
         <div class="hero-actions">
           <a routerLink="/productos" class="btn-primary btn-lg">
             Explorar catálogo
@@ -71,8 +71,8 @@ import { ProductoCardComponent } from '../../../components/producto-card/product
         <div class="trust-item">
           <div class="trust-icon"><mat-icon>credit_score</mat-icon></div>
           <div>
-            <strong>Cuotas sin interés</strong>
-            <span>Todas las tarjetas</span>
+            <strong>Pagá en cuotas</strong>
+            <span>Con todas las tarjetas</span>
           </div>
         </div>
         <div class="trust-item">
@@ -119,9 +119,9 @@ import { ProductoCardComponent } from '../../../components/producto-card/product
             <p>Despachamos en 24-48hs a todo el país, con seguimiento en tiempo real.</p>
           </div>
           <div class="feature-card">
-            <div class="feature-icon"><mat-icon>credit_score</mat-icon></div>
-            <h3>Llevalo con tu DNI</h3>
-            <p>Financiación en cuotas con solo DNI. Aprobación rápida.</p>
+            <div class="feature-icon"><mat-icon>swap_horiz</mat-icon></div>
+            <h3>Plan canje</h3>
+            <p>Traé tu celular usado y usalo como parte de pago para llevarte otro.</p>
           </div>
           <div class="feature-card">
             <div class="feature-icon"><mat-icon>verified_user</mat-icon></div>
