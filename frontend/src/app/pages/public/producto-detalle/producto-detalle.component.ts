@@ -75,7 +75,7 @@ import { CarritoService } from '../../../services/carrito.service';
             
             <div class="price-section">
               <span class="price">{{ producto().precio | currency:'ARS' }}</span>
-              <span class="installments">Mismo precio en 3 o 6 cuotas con tu tarjeta</span>
+              <span class="installments">Pagá en cuotas con todas las tarjetas (el interés depende de cada tarjeta)</span>
             </div>
 
             <div class="stock-status">

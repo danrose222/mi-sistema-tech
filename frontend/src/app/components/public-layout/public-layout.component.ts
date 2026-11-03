@@ -1,6 +1,7 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, Router } from '@angular/router';
+import { RouterModule, Router, NavigationEnd } from '@angular/router';
+import { filter } from 'rxjs';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -8,6 +9,7 @@ import { MatBadgeModule } from '@angular/material/badge';
 import { MatMenuModule } from '@angular/material/menu';
 
 import { CarritoService } from '../../services/carrito.service';
+import { PublicApiService } from '../../services/public-api.service';
 import { CookieConsentComponent } from '../cookie-consent/cookie-consent.component';
 
 @Component({
@@ -31,13 +33,29 @@ import { CookieConsentComponent } from '../cookie-consent/cookie-consent.compone
         <div class="navbar-inner">
           <img src="assets/logo.jpeg" alt="Cel Shop Center" class="logo-img logo-blend" routerLink="/">
 
-          <div class="search-wrapper">
+          <div class="search-wrapper" [class.con-categorias]="categorias().length > 0">
             <mat-icon class="search-icon">search</mat-icon>
-            <input 
-              type="text" 
-              placeholder="Buscar celulares, laptops, accesorios..." 
-              (keyup.enter)="buscar($event)"
+            <input
+              #busquedaInput
+              type="text"
+              aria-label="Buscar productos"
+              placeholder="Buscar celulares, accesorios..."
+              [value]="busqueda()"
+              (keyup.enter)="buscar(busquedaInput.value)"
             >
+            @if (categorias().length > 0) {
+              <select
+                class="search-cat"
+                aria-label="Filtrar por categoría"
+                [value]="categoria()"
+                (change)="elegirCategoria($any($event.target).value, busquedaInput.value)"
+              >
+                <option value="">Todas</option>
+                @for (cat of categorias(); track cat.id) {
+                  <option [value]="cat.slug" [selected]="cat.slug === categoria()">{{ cat.nombre }}</option>
+                }
+              </select>
+            }
           </div>
 
           <nav class="nav-actions">
@@ -86,7 +104,7 @@ import { CookieConsentComponent } from '../cookie-consent/cookie-consent.compone
           </div>
           <div class="footer-col">
             <h4>Contacto</h4>
-            <p class="footer-financiacion">Financiación en cuotas con solo DNI. Aprobación rápida.</p>
+            <p class="footer-financiacion">Pagá en cuotas con todas las tarjetas (con el interés de cada tarjeta).</p>
             <div class="contact-item">
               <mat-icon>location_on</mat-icon>
               <a href="https://www.google.com/maps/search/?api=1&query=Dean+Funes+463%2C+Capilla+del+Monte%2C+C%C3%B3rdoba" target="_blank" rel="noopener">Dean Funes 463, Capilla del Monte, Córdoba</a>
@@ -195,6 +213,24 @@ import { CookieConsentComponent } from '../cookie-consent/cookie-consent.compone
       background: rgba(255, 255, 255, 0.05);
       box-shadow: 0 0 0 3px rgba(0, 174, 239, 0.12);
     }
+    .search-wrapper.con-categorias input { padding-right: 150px; }
+    .search-cat {
+      position: absolute;
+      right: 6px;
+      top: 50%;
+      transform: translateY(-50%);
+      max-width: 42%;
+      height: calc(100% - 10px);
+      padding: 0 8px;
+      border: none;
+      border-left: 1px solid rgba(255, 255, 255, 0.12);
+      background: transparent;
+      color: inherit;
+      font: inherit;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+    .search-cat option { color: #0a1530; }
     .search-icon {
       position: absolute;
       left: 12px;
@@ -347,10 +383,42 @@ export class PublicLayoutComponent {
   carritoService = inject(CarritoService);
   private router = inject(Router);
 
-  buscar(event: Event) {
-    const query = (event.target as HTMLInputElement).value;
-    if (query.trim()) {
-      this.router.navigate(['/productos'], { queryParams: { search: query } });
-    }
+  private api = inject(PublicApiService);
+
+  categorias = signal<{ id: number; nombre: string; slug: string }[]>([]);
+  // Reflejan los filtros de la URL actual, así el buscador muestra lo que
+  // se está viendo (ej. al entrar directo a /productos?categoria=celulares).
+  busqueda = signal('');
+  categoria = signal('');
+
+  constructor() {
+    this.api.getCategorias().subscribe({
+      next: (res) => this.categorias.set(res.data || []),
+      error: () => this.categorias.set([])
+    });
+
+    this.router.events.pipe(filter((e) => e instanceof NavigationEnd)).subscribe(() => {
+      const params = this.router.parseUrl(this.router.url).queryParams;
+      this.busqueda.set(params['search'] || '');
+      this.categoria.set(params['categoria'] || '');
+    });
+  }
+
+  // Busca por texto dentro de la categoría elegida (si hay una).
+  buscar(texto: string) {
+    this.irAlCatalogo(texto, this.categoria());
+  }
+
+  // Elegir una categoría filtra al instante, manteniendo lo que se haya escrito.
+  elegirCategoria(slug: string, texto: string) {
+    this.categoria.set(slug);
+    this.irAlCatalogo(texto, slug);
+  }
+
+  private irAlCatalogo(texto: string, categoria: string) {
+    const search = texto.trim();
+    this.router.navigate(['/productos'], {
+      queryParams: { search: search || null, categoria: categoria || null, page: null }
+    });
   }
 }
