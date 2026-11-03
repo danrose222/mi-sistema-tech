@@ -33,7 +33,7 @@
             "server": "src/main.server.ts",
             "outputMode": "server",
             "security": {
-              "allowedHosts": []
+              "allowedHosts": ["celshopcenter.com.ar", "www.celshopcenter.com.ar"]
             },
             "ssr": {
               "entry": "src/server.ts"

@@ -5,13 +5,14 @@ import { provideAnimations } from '@angular/platform-browser/animations';
 
 import { routes } from './app.routes';
 import { authInterceptor } from './interceptors/auth.interceptor';
+import { ssrApiInterceptor } from './interceptors/ssr-api.interceptor';
 import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes, withInMemoryScrolling({ scrollPositionRestoration: 'enabled', anchorScrolling: 'enabled' })),
-    provideHttpClient(withFetch(), withInterceptors([authInterceptor])),
+    provideHttpClient(withFetch(), withInterceptors([authInterceptor, ssrApiInterceptor])),
     provideAnimations(),
     provideClientHydration(withEventReplay()),
   ],

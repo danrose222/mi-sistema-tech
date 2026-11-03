@@ -63,6 +63,8 @@ export default defineConfig({
     {
       command: `npx ng serve --port ${FRONTEND_PORT} --proxy-config proxy.e2e.conf.json`,
       url: FRONTEND_URL,
+      // Igual que en producción: el SSR consulta el backend directo, sin proxy.
+      env: { BACKEND_URL: `http://localhost:${BACKEND_PORT}` },
       reuseExistingServer: false,
       timeout: 180_000
     }

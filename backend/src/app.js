@@ -58,10 +58,23 @@ app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // 4. Rate Limiting: Prevenir fuerza bruta y DoS
+// En producción el backend está detrás de nginx (un solo salto): sin esto,
+// req.ip es siempre 127.0.0.1 y todos los visitantes comparten el mismo
+// límite. Con 1, Express toma la IP real del último valor de X-Forwarded-For,
+// que agrega nginx y el cliente no puede falsificar.
+app.set('trust proxy', 1);
+
+const IPS_LOOPBACK = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
+
 const apiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutos
     max: 100, // Límite de 100 peticiones por IP cada 15 minutos
-    message: { error: 'Demasiadas peticiones desde esta IP, intente de nuevo en 15 minutos.' }
+    message: { error: 'Demasiadas peticiones desde esta IP, intente de nuevo en 15 minutos.' },
+    // El SSR del catálogo consulta la API directo por localhost (sin pasar
+    // por nginx): si contara, todas las páginas renderizadas compartirían un
+    // único límite y un rastreo de Google lo agotaría. El tráfico externo
+    // siempre llega vía nginx con la IP real, así que nunca es loopback.
+    skip: (req) => IPS_LOOPBACK.has(req.ip)
 });
 app.use('/api/', apiLimiter);
 app.get('/', (req, res) => {
