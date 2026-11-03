@@ -47,7 +47,7 @@ import { ProductoCardComponent } from '../../../components/producto-card/product
           Tecnología al mejor precio · Envío a todo el país
         </span>
         <h1>El futuro de la tecnología<br><span class="text-gradient">está en tus manos.</span></h1>
-        <p class="hero-sub">Cuotas con todas las tarjetas · Envío gratis desde $100.000 · Garantía oficial de 12 meses.</p>
+        <p class="hero-sub">Cuotas con todas las tarjetas · Envío gratis desde $100.000 · Cambio directo en 30 días.</p>
         <div class="hero-actions">
           <a routerLink="/productos" class="btn-primary btn-lg">
             Explorar catálogo
@@ -78,8 +78,8 @@ import { ProductoCardComponent } from '../../../components/producto-card/product
         <div class="trust-item">
           <div class="trust-icon"><mat-icon>verified</mat-icon></div>
           <div>
-            <strong>Garantía oficial</strong>
-            <span>12 meses</span>
+            <strong>Cambio directo</strong>
+            <span>30 días en el local</span>
           </div>
         </div>
       </div>
@@ -125,8 +125,8 @@ import { ProductoCardComponent } from '../../../components/producto-card/product
           </div>
           <div class="feature-card">
             <div class="feature-icon"><mat-icon>verified_user</mat-icon></div>
-            <h3>Garantía oficial</h3>
-            <p>12 meses de garantía y devolución gratuita dentro de los 30 días.</p>
+            <h3>Garantía y cambio</h3>
+            <p>30 días de cambio directo en el local, más la garantía legal: 6 meses en nuevos y 3 en usados y reacondicionados.</p>
           </div>
           <div class="feature-card">
             <div class="feature-icon"><mat-icon>support_agent</mat-icon></div>
