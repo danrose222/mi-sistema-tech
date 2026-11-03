@@ -10,7 +10,14 @@ import { join } from 'node:path';
 const browserDistFolder = join(import.meta.dirname, '../browser');
 
 const app = express();
-const angularApp = new AngularNodeAppEngine();
+// nginx (deploy/nginx/celshopcenter.conf) siempre define X-Forwarded-For y
+// X-Forwarded-Proto. Si Angular recibe un X-Forwarded-* no confiable, lo
+// descarta y renderiza solo en el cliente (sin SEO). Se confía únicamente en
+// esos dos porque nginx los pisa; X-Forwarded-Host (que nginx no define y un
+// cliente podría inventar) sigue sin ser confiable.
+const angularApp = new AngularNodeAppEngine({
+  trustProxyHeaders: ['x-forwarded-for', 'x-forwarded-proto'],
+});
 
 // El sitemap se genera en el backend (tiene acceso directo a los productos activos);
 // acá solo se hace de passthrough para que quede servido en la raíz del dominio,
