@@ -8,8 +8,9 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { ProductosService, Producto } from '../../../services/productos.service';
+import { ProductosService, Producto, Categoria } from '../../../services/productos.service';
 
 @Component({
   selector: 'app-producto-form',
@@ -23,7 +24,8 @@ import { ProductosService, Producto } from '../../../services/productos.service'
     MatButtonModule,
     MatCheckboxModule,
     MatIconModule,
-    MatTooltipModule
+    MatTooltipModule,
+    MatSelectModule
   ],
   template: `
     <h2 mat-dialog-title>{{ isEdit ? 'Editar Producto' : 'Nuevo Producto' }}</h2>
@@ -78,6 +80,16 @@ import { ProductosService, Producto } from '../../../services/productos.service'
           </mat-form-field>
         </div>
 
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Categoría</mat-label>
+          <mat-select formControlName="categoria_id">
+            <mat-option [value]="null">Sin categoría</mat-option>
+            @for (cat of categorias(); track cat.id) {
+              <mat-option [value]="cat.id">{{ cat.nombre }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
         <div class="imagen-uploader">
           <label class="imagen-label">Imágenes del producto (hasta 5, la primera es la principal)</label>
           <div class="imagen-preview-row">
@@ -116,6 +128,7 @@ import { ProductosService, Producto } from '../../../services/productos.service'
         </div>
 
         <mat-checkbox formControlName="activo">Producto activo (visible en el catálogo)</mat-checkbox>
+        <mat-checkbox formControlName="destacado">Destacado (aparece primero en la tienda)</mat-checkbox>
         <mat-checkbox formControlName="requiere_imei">
           Requiere IMEI / N° de serie (celulares)
         </mat-checkbox>
@@ -226,6 +239,8 @@ export class ProductoFormComponent implements OnDestroy {
   archivosSeleccionados = signal<File[]>([]);
   private objectUrlsCreadas: string[] = [];
 
+  categorias = signal<Categoria[]>([]);
+
   isEdit = !!this.data?.producto;
   isSaving = false;
 
@@ -237,8 +252,17 @@ export class ProductoFormComponent implements OnDestroy {
     precio: [this.data?.producto?.precio ?? '', [Validators.required, Validators.min(0)]],
     stock: [this.data?.producto?.stock ?? 0, [Validators.min(0)]],
     activo: [this.data?.producto ? !!this.data.producto.activo : true],
-    requiere_imei: [this.data?.producto ? !!this.data.producto.requiere_imei : false]
+    requiere_imei: [this.data?.producto ? !!this.data.producto.requiere_imei : false],
+    categoria_id: [this.data?.producto?.categoria_id ?? null],
+    destacado: [this.data?.producto ? !!this.data.producto.destacado : false]
   });
+
+  constructor() {
+    this.productosService.listarCategorias().subscribe({
+      next: (res) => this.categorias.set(res.data || []),
+      error: () => this.snackBar.open('No se pudieron cargar las categorías', 'Cerrar', { duration: 4000 })
+    });
+  }
 
   generarCodigoInterno() {
     const codigo = `CEL-${Date.now()}`;

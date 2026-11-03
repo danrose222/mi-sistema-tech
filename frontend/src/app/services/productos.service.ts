@@ -12,7 +12,28 @@ export interface Producto {
   stock: number;
   activo: boolean | number;
   requiere_imei: boolean | number;
+  categoria_id?: number | null;
+  categoria_nombre?: string | null;
+  destacado?: boolean | number;
   imagenes?: string[];
+}
+
+export interface Categoria {
+  id: number;
+  nombre: string;
+  slug: string;
+  orden: number;
+}
+
+export interface ResultadoImportacion {
+  creados: number;
+  actualizados: number;
+}
+
+export interface ResultadoImagenesMasivo {
+  productos_actualizados: number;
+  imagenes_asignadas: number;
+  sin_producto: string[];
 }
 
 export interface ProductosResponse {
@@ -64,10 +85,24 @@ export class ProductosService {
     return this.http.delete<{ success: boolean }>(`${this.apiUrl}/${id}`);
   }
 
-  importarExcel(archivo: File): Observable<{ success: boolean; data: { creados: number } }> {
+  // Las filas con un SKU que ya existe actualizan ese producto en vez de
+  // duplicarlo; el resto se crea.
+  importarExcel(archivo: File): Observable<{ success: boolean; data: ResultadoImportacion }> {
     const formData = new FormData();
     formData.append('archivo', archivo);
-    return this.http.post<{ success: boolean; data: { creados: number } }>(`${this.apiUrl}/importar`, formData);
+    return this.http.post<{ success: boolean; data: ResultadoImportacion }>(`${this.apiUrl}/importar`, formData);
+  }
+
+  listarCategorias(): Observable<{ success: boolean; data: Categoria[] }> {
+    return this.http.get<{ success: boolean; data: Categoria[] }>(`${this.apiUrl}/categorias`);
+  }
+
+  // Cada foto se asigna al producto cuyo SKU es el comienzo del nombre del
+  // archivo (ej. "CEL-N-001_frente.jpg" -> SKU "CEL-N-001").
+  subirImagenesMasivo(archivos: File[]): Observable<{ success: boolean; data: ResultadoImagenesMasivo }> {
+    const formData = new FormData();
+    archivos.forEach((archivo) => formData.append('imagenes', archivo));
+    return this.http.post<{ success: boolean; data: ResultadoImagenesMasivo }>(`${this.apiUrl}/imagenes/masivo`, formData);
   }
 
   descargarPlantillaImportacion(): Observable<Blob> {

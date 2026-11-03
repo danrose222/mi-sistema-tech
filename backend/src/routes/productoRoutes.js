@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const productoController = require('../controllers/productoController');
 const { authenticate, authorizeRole } = require('../middleware/authMiddleware');
-const { uploadProductoImagen, uploadExcelProductos } = require('../middleware/uploadMiddleware');
+const { uploadProductoImagen, uploadExcelProductos, uploadImagenesMasivo } = require('../middleware/uploadMiddleware');
 
 const adminOnly = authorizeRole(['admin']);
 
@@ -12,6 +12,8 @@ router.get('/', productoController.listarProductos);
 router.get('/barcode/:barcode', productoController.obtenerProductoPorBarcode);
 router.get('/importar/plantilla', productoController.descargarPlantillaImportacion);
 router.post('/importar', uploadExcelProductos, productoController.importarProductos);
+router.get('/categorias', productoController.listarCategorias);
+router.post('/imagenes/masivo', uploadImagenesMasivo, productoController.subirImagenesMasivo);
 router.get('/:id', productoController.obtenerProducto);
 // uploadProductoImagen solo actúa si la request es multipart/form-data (hay
 // imagen nueva); si es JSON plano, no toca req.body y sigue de largo.

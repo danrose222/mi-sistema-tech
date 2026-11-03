@@ -1,24 +1,7 @@
 const productoModel = require('../models/productoModel');
+const categoriaModel = require('../models/categoriaModel');
 const logError = require('../utils/logError');
-
-function quitarAcentos(text) {
-  return text
-    .normalize('NFD')
-    .split('')
-    .filter((ch) => {
-      const code = ch.codePointAt(0);
-      return code < 0x0300 || code > 0x036f;
-    })
-    .join('');
-}
-
-function slugify(text) {
-  return quitarAcentos(String(text))
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-}
+const slugify = require('../utils/slugify');
 
 function toPublico(producto) {
   return {
@@ -28,8 +11,10 @@ function toPublico(producto) {
     descripcion: producto.descripcion,
     precio: Number(producto.precio),
     stock: producto.stock,
-    categoria_id: null,
-    categoria_nombre: null,
+    categoria_id: producto.categoria_id ?? null,
+    categoria_nombre: producto.categoria_nombre ?? null,
+    categoria_slug: producto.categoria_slug ?? null,
+    destacado: Boolean(producto.destacado),
     imagenes: producto.imagenes || []
   };
 }
@@ -39,8 +24,9 @@ exports.listarProductos = async (req, res) => {
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 20;
     const search = req.query.search || '';
+    const categoria = String(req.query.categoria || '').trim();
 
-    const { data, total } = await productoModel.obtenerProductosPublicoPaginado({ page, limit, search });
+    const { data, total } = await productoModel.obtenerProductosPublicoPaginado({ page, limit, search, categoria });
     res.json({ success: true, data: data.map(toPublico), total });
   } catch (err) {
     logError('[Publico]', err);
@@ -64,10 +50,18 @@ exports.obtenerProductoPorSlug = async (req, res) => {
 };
 
 exports.listarCategorias = async (req, res) => {
-  // No existe un sistema de categorías todavía (ni tabla en el schema);
-  // se devuelve una lista vacía para que el frontend siga funcionando
-  // (el sidebar de categorías simplemente no muestra filtros).
-  res.json({ success: true, data: [] });
+  try {
+    // Solo las categorías con productos activos: el sidebar de la tienda no
+    // debería ofrecer categorías vacías.
+    const categorias = await categoriaModel.listarCategoriasConProductosActivos();
+    res.json({
+      success: true,
+      data: categorias.map((c) => ({ id: c.id, nombre: c.nombre, slug: c.slug, total: Number(c.total_productos) }))
+    });
+  } catch (err) {
+    logError('[Publico]', err);
+    res.status(500).json({ success: false, error: 'Error al obtener categorías' });
+  }
 };
 
 function xmlEscape(text) {

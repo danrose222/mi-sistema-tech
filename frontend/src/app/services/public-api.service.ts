@@ -11,6 +11,8 @@ export interface ProductoPublico {
   stock: number;
   categoria_id: number;
   categoria_nombre: string;
+  categoria_slug?: string | null;
+  destacado?: boolean;
   imagenes: string[];
 }
 
