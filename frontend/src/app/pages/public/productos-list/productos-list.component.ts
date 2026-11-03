@@ -44,7 +44,7 @@ import { ProductoCardComponent } from '../../../components/producto-card/product
               Todas las categorías
             </a>
             @for (cat of categorias(); track cat.id) {
-              <a mat-list-item (click)="setCategoria(cat.nombre)" [class.active-cat]="categoriaSeleccionada() === cat.nombre">
+              <a mat-list-item (click)="setCategoria(cat.slug)" [class.active-cat]="categoriaSeleccionada() === cat.slug">
                 {{ cat.nombre }}
               </a>
             }
@@ -207,6 +207,7 @@ export class ProductosListComponent implements OnInit {
     this.api.getCategorias().subscribe({
       next: (res) => {
         this.categorias.set(res.data || []);
+        this.actualizarSEO();
       }
     });
 
@@ -251,7 +252,8 @@ export class ProductosListComponent implements OnInit {
     if (this.searchQuery()) {
       title = `Resultados para "${this.searchQuery()}"`;
     } else if (this.categoriaSeleccionada()) {
-      title = this.categoriaSeleccionada().replace('-', ' ');
+      const slug = this.categoriaSeleccionada();
+      title = this.categorias().find((c) => c.slug === slug)?.nombre || slug.replace(/-/g, ' ');
       desc = `Encuentra los mejores precios en ${title}.`;
     }
     

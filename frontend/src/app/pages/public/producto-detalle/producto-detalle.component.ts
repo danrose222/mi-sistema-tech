@@ -343,9 +343,10 @@ export class ProductoDetalleComponent implements OnInit {
   }
 
   irCategoria() {
-    const categoria = this.producto()?.categoria_nombre;
+    const producto = this.producto();
+    const categoria = producto?.categoria_slug || producto?.categoria_nombre?.toLowerCase();
     if (!categoria) return;
-    this.router.navigate(['/productos'], { queryParams: { categoria: categoria.toLowerCase() } });
+    this.router.navigate(['/productos'], { queryParams: { categoria } });
   }
 
   agregarCarrito() {

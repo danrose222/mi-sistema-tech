@@ -49,6 +49,11 @@ import { ImportarErroresDialogComponent } from './importar-errores-dialog/import
             <mat-icon>upload_file</mat-icon> {{ importando() ? 'Importando...' : 'Importar Excel' }}
           </button>
           <input #archivoInput type="file" accept=".xlsx" hidden (change)="onArchivoSeleccionado($event)">
+          <button mat-stroked-button (click)="fotosInput.click()" [disabled]="subiendoFotos()"
+                  matTooltip="Subí muchas fotos juntas: cada una se asigna al producto cuyo SKU es el comienzo del nombre del archivo">
+            <mat-icon>add_photo_alternate</mat-icon> {{ subiendoFotos() ? 'Subiendo...' : 'Subir fotos' }}
+          </button>
+          <input #fotosInput type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple hidden (change)="onFotosSeleccionadas($event)">
           <button mat-flat-button color="primary" class="btn-nuevo" (click)="abrirModalForm()">
             <mat-icon>add</mat-icon> Nuevo Producto
           </button>
@@ -80,8 +85,13 @@ import { ImportarErroresDialogComponent } from './importar-errores-dialog/import
           <ng-container matColumnDef="nombre">
             <th mat-header-cell *matHeaderCellDef> Producto </th>
             <td mat-cell *matCellDef="let p">
-              <div class="fw-500">{{ p.nombre }}</div>
-              <div class="muted">{{ p.sku || 'Sin SKU' }}</div>
+              <div class="fw-500">
+                @if (p.destacado) {
+                  <mat-icon class="icono-destacado" matTooltip="Destacado en la tienda">star</mat-icon>
+                }
+                {{ p.nombre }}
+              </div>
+              <div class="muted">{{ p.sku || 'Sin SKU' }}@if (p.categoria_nombre) { · {{ p.categoria_nombre }} }</div>
             </td>
           </ng-container>
 
@@ -206,6 +216,7 @@ import { ImportarErroresDialogComponent } from './importar-errores-dialog/import
     table { width: 100%; }
     .fw-500 { font-weight: 500; }
     .muted { font-size: 0.8rem; color: #64748b; }
+    .icono-destacado { font-size: 16px; width: 16px; height: 16px; color: #f59e0b; vertical-align: -2px; margin-right: 2px; }
     .actions-col { width: 160px; text-align: right; }
     .hover-row:hover { background-color: #f8fafc; }
     .text-accent { color: #0ea5e9; }
@@ -245,6 +256,7 @@ export class ProductosComponent implements OnInit {
   pageIndex = signal<number>(0);
   isLoading = signal<boolean>(false);
   importando = signal<boolean>(false);
+  subiendoFotos = signal<boolean>(false);
 
   searchControl = new FormControl('');
 
@@ -334,7 +346,8 @@ export class ProductosComponent implements OnInit {
     this.productosService.importarExcel(archivo).subscribe({
       next: (res) => {
         this.importando.set(false);
-        this.snackBar.open(`Se importaron ${res.data.creados} producto(s) correctamente`, 'Cerrar', { duration: 5000 });
+        const { creados, actualizados } = res.data;
+        this.snackBar.open(`Importación lista: ${creados} producto(s) nuevo(s) y ${actualizados ?? 0} actualizado(s)`, 'Cerrar', { duration: 5000 });
         this.cargarDatos();
       },
       error: (err) => {
@@ -346,6 +359,32 @@ export class ProductosComponent implements OnInit {
             errores: err?.error?.errores
           }
         });
+      }
+    });
+  }
+
+  onFotosSeleccionadas(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const archivos = Array.from(input.files || []);
+    input.value = '';
+    if (archivos.length === 0) return;
+
+    this.subiendoFotos.set(true);
+    this.productosService.subirImagenesMasivo(archivos).subscribe({
+      next: (res) => {
+        this.subiendoFotos.set(false);
+        const { imagenes_asignadas, productos_actualizados, sin_producto } = res.data;
+        let mensaje = `Se asignaron ${imagenes_asignadas} foto(s) a ${productos_actualizados} producto(s).`;
+        if (sin_producto.length > 0) {
+          const ejemplos = sin_producto.slice(0, 3).join(', ');
+          mensaje += ` ${sin_producto.length} no coinciden con ningún SKU (${ejemplos}${sin_producto.length > 3 ? '…' : ''}).`;
+        }
+        this.snackBar.open(mensaje, 'Cerrar', { duration: 8000 });
+        this.cargarDatos();
+      },
+      error: (err) => {
+        this.subiendoFotos.set(false);
+        this.snackBar.open(err?.error?.error || 'No se pudieron subir las fotos', 'Cerrar', { duration: 5000 });
       }
     });
   }

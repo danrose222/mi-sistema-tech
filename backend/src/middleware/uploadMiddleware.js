@@ -43,6 +43,28 @@ exports.uploadProductoImagen = (req, res, next) => {
   });
 };
 
+// Carga masiva de fotos desde el panel (Productos -> "Subir fotos"): mismo
+// storage y validación que las fotos de un producto, pero acepta muchas a la
+// vez. Cada archivo se asigna a su producto por SKU en el controller.
+const MAX_IMAGENES_MASIVO = 300;
+const uploadMasivo = multer({
+  storage,
+  fileFilter,
+  limits: { fileSize: 5 * 1024 * 1024, files: MAX_IMAGENES_MASIVO }
+}).array('imagenes', MAX_IMAGENES_MASIVO);
+
+exports.uploadImagenesMasivo = (req, res, next) => {
+  uploadMasivo(req, res, (err) => {
+    if (err) {
+      const mensaje = err.code === 'LIMIT_FILE_COUNT' || err.code === 'LIMIT_UNEXPECTED_FILE'
+        ? `Podés subir hasta ${MAX_IMAGENES_MASIVO} imágenes por vez.`
+        : err.message;
+      return res.status(400).json({ success: false, error: mensaje });
+    }
+    next();
+  });
+};
+
 // El Excel de importación no se guarda en disco: se procesa en memoria y se
 // descarta apenas se insertan los productos, así que usa memoryStorage en
 // vez del diskStorage de las imágenes.
