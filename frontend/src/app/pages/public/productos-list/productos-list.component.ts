@@ -212,7 +212,10 @@ import { ProductoCardComponent } from '../../../components/producto-card/product
         cursor: pointer;
       }
       .cat-chip.active { background: var(--signal, #1e6bff); border-color: transparent; color: #fff; }
-      .catalog-layout { flex-direction: column; }
+      /* En columna, flex-start haría que el contenido tome el ancho de la fila
+         de chips (más ancha que la pantalla) y desborde la página. */
+      .catalog-layout { flex-direction: column; align-items: stretch; }
+      .cat-chips { max-width: 100%; }
       .sidebar { display: none; }
     }
   `]
