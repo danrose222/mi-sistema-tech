@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const CABLE = { nombre: 'Cable USB-C 2M', precio: 'ARS12,000.00' };
+const CABLE = { nombre: 'Cable USB-C 2M', precio: '$\u00a012.000,00' };
 
 test.describe('Catálogo público', () => {
   test.beforeEach(async ({ page }) => {
